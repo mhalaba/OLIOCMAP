@@ -1,13 +1,11 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-var env = require(`${__hooks}/lib/env.js`);
-var expire = require(`${__hooks}/lib/expire.js`);
-
 cronAdd("expire", "*/10 * * * *", () => {
-  expire.run($app);
+  require(`${__hooks}/lib/expire.js`).run($app);
 });
 
 cronAdd("counts", "*/2 * * * *", () => {
+  var env = require(`${__hooks}/lib/env.js`);
   try {
     var rec = $app.findRecordById("node_status", env.SELF_ID);
     var points = $app.findAllRecords("points");
