@@ -93,6 +93,16 @@ export function createAedImporter({ pb, cfg, log = console }) {
     if (cfg.nodeRole === "central") return;
     if (cfg.aedImport === "off") return;
     if (existsSync(markerPath()) && cfg.aedImport !== "fetch") {
+      try {
+        const m = JSON.parse(await readFile(markerPath(), "utf8"));
+        job.state = "ok";
+        job.total = Number(m.total) || 0;
+        job.done = Number(m.imported) || 0;
+        job.skipped = Number(m.skipped) || 0;
+        job.source = "bundled";
+      } catch {
+        /* znacznik nieczytelny — i tak pomijamy import */
+      }
       log.log?.("[aed] pomijam autoimport — znacznik już jest");
       return;
     }
