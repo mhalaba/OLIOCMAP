@@ -283,13 +283,14 @@ a { color: var(--red); }
   gap: 8px;
 }
 .cat-pick {
-  min-height: 64px;
+  min-height: 48px;
   border-radius: 14px;
   border: 2px solid var(--line);
   background: #fff;
   font-weight: 800;
   text-align: left;
-  padding: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
 }
 .cat-pick.on { border-width: 3px; box-shadow: 0 0 0 2px #fff inset; }
 .hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
@@ -336,8 +337,9 @@ a { color: var(--red); }
 
 .tabs {
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  overflow: visible;
   margin-bottom: 12px;
 }
 .tabs button {

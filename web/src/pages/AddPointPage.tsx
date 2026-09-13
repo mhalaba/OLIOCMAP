@@ -126,7 +126,7 @@ export function AddPointPage() {
           right: 10,
           bottom: 72,
           zIndex: 7,
-          maxHeight: "58vh",
+          maxHeight: "70vh",
           overflow: "auto",
           margin: 0,
         }}
@@ -154,31 +154,33 @@ export function AddPointPage() {
             </button>
           ))}
         </div>
-
-        <div className="row" style={{ marginTop: 10 }}>
-          <label className="field grow">
-            <span>{t("form.lat")}</span>
-            <input type="number" step="0.000001" value={lat} onChange={(e) => setLat(Number(e.target.value))} />
-          </label>
-          <label className="field grow">
-            <span>{t("form.lon")}</span>
-            <input type="number" step="0.000001" value={lon} onChange={(e) => setLon(Number(e.target.value))} />
-          </label>
-        </div>
-        <label className="field">
-          <span>{t("form.adres")}</span>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} />
-        </label>
-        <label className="field">
-          <span>{t("form.tytul")}</span>
-          <input value={title} placeholder={autoTitle} onChange={(e) => setTitle(e.target.value)} maxLength={80} />
-        </label>
+        <p className="hint">
+          {autoTitle} · {lat.toFixed(4)}, {lon.toFixed(4)}
+        </p>
 
         <button type="button" className="btn ghost" onClick={() => setMore(!more)}>
           {more ? t("form.mniej") : t("form.wiecej")}
         </button>
         {more ? (
           <>
+            <div className="row" style={{ marginTop: 10 }}>
+              <label className="field grow">
+                <span>{t("form.lat")}</span>
+                <input type="number" step="0.000001" value={lat} onChange={(e) => setLat(Number(e.target.value))} />
+              </label>
+              <label className="field grow">
+                <span>{t("form.lon")}</span>
+                <input type="number" step="0.000001" value={lon} onChange={(e) => setLon(Number(e.target.value))} />
+              </label>
+            </div>
+            <label className="field">
+              <span>{t("form.adres")}</span>
+              <input value={address} onChange={(e) => setAddress(e.target.value)} />
+            </label>
+            <label className="field">
+              <span>{t("form.tytul")}</span>
+              <input value={title} placeholder={autoTitle} onChange={(e) => setTitle(e.target.value)} maxLength={80} />
+            </label>
             <label className="field">
               <span>{t("form.opis")}</span>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} />
