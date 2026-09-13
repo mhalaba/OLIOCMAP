@@ -52,8 +52,11 @@ case "$cmd" in
       exit 1
     fi
     net="$(compose_net)"
-    docker network connect "$net" "$cid" || true
-    echo "centrala podłączona do $net"
+    # disconnect gubi alias usługi — bez --alias węzeł nie rozwiąże central-caddy
+    docker network connect --alias central-caddy "$net" "$cid" 2>/dev/null \
+      || docker network connect "$net" "$cid" 2>/dev/null \
+      || true
+    echo "centrala podłączona do $net (alias central-caddy)"
     ;;
   clock-skew)
     node="${2:-sync-worker}"

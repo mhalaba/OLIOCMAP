@@ -60,7 +60,10 @@ async function logSync(direction, peer, ok, count, error) {
 
 async function updateSelfStatus(patch) {
   try {
-    const body = { node_id: cfg.nodeId, public_key: publicB64, ...patch };
+    const body = { node_id: cfg.nodeId, public_key: publicB64 };
+    for (const [k, v] of Object.entries(patch)) {
+      if (v !== undefined) body[k] = v;
+    }
     await pb.upsert("node_status", SELF_STATUS_ID, body);
   } catch (err) {
     console.error("node_status", err.message);
@@ -312,6 +315,28 @@ async function buildPeerList() {
   return [...byId.values()].filter((p) => p.node_id && p.base_url);
 }
 
+async function signLocalVerified() {
+  try {
+    const recs = await pb.listAll(
+      "points",
+      `status = "verified" && source_node = "${cfg.nodeId}" && category != "potrzeba"`
+    );
+    for (const rec of recs.slice(0, 200)) {
+      const row = recordToRow(rec);
+      if (!row.sig) await signAndStore(row);
+      else {
+        try {
+          if (!verifyRow(row, publicKeyFromB64(publicB64), row.sig)) await signAndStore(row);
+        } catch {
+          await signAndStore(row);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[sync] podpisywanie lokalne", err.message);
+  }
+}
+
 async function syncLoopOnce() {
   const healthy = await pb.health();
   if (!healthy) {
@@ -319,6 +344,7 @@ async function syncLoopOnce() {
     await updateSelfStatus({ mode: "wyspa", last_error: "pocketbase down" });
     return;
   }
+  await signLocalVerified();
   const peers = await buildPeerList();
   if (!peers.length) {
     await updateSelfStatus({ mode: "wyspa", peers: [], last_error: "" });
@@ -334,6 +360,7 @@ async function syncLoopOnce() {
       if (!h.ok || !h.data) throw new Error("health");
       anyOk = true;
       backoff.set(peer.node_id, 0);
+      backoff.set(peer.node_id + ":ms", 0);
       if (h.data.public_key) {
         await upsertPeerRow({
           node_id: peer.node_id,
@@ -351,15 +378,29 @@ async function syncLoopOnce() {
       peer.id = row ? row.id : peer.id;
       peer.role = (row && row.role) || peer.role;
       if (trusted) {
-        const pulled = await pullPeer(peer, freshDb);
-        await logSync("pull", peer.node_id, true, pulled.applied, "");
-        const pushed = await pushPeer(peer);
-        await logSync("push", peer.node_id, true, pushed.pushed, "");
+        let pullErr = "";
+        let pushErr = "";
+        let pulled = { applied: 0 };
+        let pushed = { pushed: 0 };
+        try {
+          pulled = await pullPeer(peer, freshDb);
+          await logSync("pull", peer.node_id, true, pulled.applied, "");
+        } catch (err) {
+          pullErr = err.message;
+          await logSync("pull", peer.node_id, false, 0, pullErr);
+        }
+        try {
+          pushed = await pushPeer(peer);
+          await logSync("push", peer.node_id, true, pushed.pushed, "");
+        } catch (err) {
+          pushErr = err.message;
+          await logSync("push", peer.node_id, false, 0, pushErr);
+        }
         await pushStatus(peer);
         await updateSelfStatus({
-          last_pull: new Date().toISOString().replace("T", " "),
-          last_push: new Date().toISOString().replace("T", " "),
-          last_error: "",
+          last_pull: pullErr ? undefined : new Date().toISOString().replace("T", " "),
+          last_push: pushErr ? undefined : new Date().toISOString().replace("T", " "),
+          last_error: pushErr || pullErr || "",
         });
       } else {
         await logSync("health", peer.node_id, true, 0, "węzeł widoczny, czeka na zaufanie");
