@@ -1,14 +1,20 @@
 {
   "version": 8,
   "name": "Mapa Kryzysowa — warstwa bazowa",
-  "sources": {},
-  "layers": [
-    {
-      "id": "bg",
-      "type": "background",
-      "paint": { "background-color": "#e8e4dc" }
+  "sources": {
+    "basemap": {
+      "type": "vector",
+      "url": "pmtiles:///tiles/poland.pmtiles"
     }
-  ],
-  "glyphs": "/fonts/{fontstack}/{range}.pbf",
-  "sprite": "/sprites/sprite"
+  },
+  "layers": [
+    { "id": "bg", "type": "background", "paint": { "background-color": "#e4dfd4" } },
+    { "id": "earth", "type": "fill", "source": "basemap", "source-layer": "earth", "paint": { "fill-color": "#e4dfd4" } },
+    { "id": "landcover", "type": "fill", "source": "basemap", "source-layer": "landcover", "paint": { "fill-color": "#d3e0c6", "fill-opacity": 0.55 } },
+    { "id": "landuse", "type": "fill", "source": "basemap", "source-layer": "landuse", "paint": { "fill-color": "#d8c9b0", "fill-opacity": 0.35 } },
+    { "id": "water", "type": "fill", "source": "basemap", "source-layer": "water", "paint": { "fill-color": "#9ec3de" } },
+    { "id": "buildings", "type": "fill", "source": "basemap", "source-layer": "buildings", "paint": { "fill-color": "#cfc6b8", "fill-opacity": 0.75 } },
+    { "id": "roads-casing", "type": "line", "source": "basemap", "source-layer": "roads", "paint": { "line-color": "#c2b8aa", "line-width": 2.2 } },
+    { "id": "roads", "type": "line", "source": "basemap", "source-layer": "roads", "paint": { "line-color": "#f7f3ec", "line-width": 1.2 } }
+  ]
 }

@@ -123,23 +123,25 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
         const file = files.find((f: string) => f.endsWith(".pmtiles")) || (await fetch("/tiles/poland.pmtiles", { method: "HEAD" }).then((r) => (r.ok ? "poland.pmtiles" : "")));
         if (file) {
           missing = false;
+          const origin = window.location.origin;
+          const pmtilesUrl = `pmtiles://${origin}/tiles/${file}`;
           const local = await fetch("/style.json").then((r) => (r.ok ? r.json() : null));
           style = local || {
             version: 8,
-            sources: { basemap: { type: "vector", url: `pmtiles:///tiles/${file}` } },
+            sources: { basemap: { type: "vector", url: pmtilesUrl } },
             layers: [
-              { id: "bg", type: "background", paint: { "background-color": "#e8e4dc" } },
-              { id: "earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e8e4dc" } },
-              { id: "water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#b7d2e8" } },
-              { id: "landuse", type: "fill", source: "basemap", "source-layer": "landuse", paint: { "fill-color": "#d5e3c8", "fill-opacity": 0.5 } },
-              { id: "roads", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#fff", "line-width": 1.2 } },
-              { id: "buildings", type: "fill", source: "basemap", "source-layer": "buildings", paint: { "fill-color": "#d8d2c8", "fill-opacity": 0.6 } },
+              { id: "bg", type: "background", paint: { "background-color": "#e4dfd4" } },
+              { id: "earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e4dfd4" } },
+              { id: "landcover", type: "fill", source: "basemap", "source-layer": "landcover", paint: { "fill-color": "#d3e0c6", "fill-opacity": 0.55 } },
+              { id: "landuse", type: "fill", source: "basemap", "source-layer": "landuse", paint: { "fill-color": "#d8c9b0", "fill-opacity": 0.35 } },
+              { id: "water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#9ec3de" } },
+              { id: "buildings", type: "fill", source: "basemap", "source-layer": "buildings", paint: { "fill-color": "#cfc6b8", "fill-opacity": 0.75 } },
+              { id: "roads-casing", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#c2b8aa", "line-width": 2.2 } },
+              { id: "roads", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#f7f3ec", "line-width": 1.2 } },
             ],
           };
           if (!style.sources) style.sources = {};
-          if (!style.sources.basemap) {
-            style.sources.basemap = { type: "vector", url: `pmtiles:///tiles/${file}` };
-          }
+          style.sources.basemap = { type: "vector", url: pmtilesUrl };
         }
       } catch {
         missing = true;
@@ -231,11 +233,6 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
-      }
-      try {
-        maplibregl.removeProtocol("pmtiles");
-      } catch {
-        /* ignore */
       }
     };
   }, []);
