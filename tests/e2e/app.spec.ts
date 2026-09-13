@@ -187,3 +187,18 @@ test("9. brak angielskich etykiet UI", async ({ request }) => {
     }
   }
 });
+
+test("10. administrator dodaje konto w panelu", async ({ page }) => {
+  await login(page, "admin@demo.local");
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { name: "Panel kont" })).toBeVisible();
+  const email = `n${Date.now()}@demo.local`;
+  await page.locator("#admin-name").fill("Nowy operator");
+  await page.locator("#admin-email").fill(email);
+  await page.locator("#admin-haslo").fill("demo12345");
+  await page.locator("#admin-haslo2").fill("demo12345");
+  await page.locator("#admin-rola").selectOption("operator");
+  await page.getByRole("button", { name: "Nowe konto" }).click();
+  await expect(page.getByText("Konto utworzone")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText(email)).toBeVisible();
+});

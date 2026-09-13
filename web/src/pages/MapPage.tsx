@@ -1,16 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FilterChips } from "../components/FilterChips";
-import { Legend } from "../components/Legend";
 import { MapView } from "../components/MapView";
 import { t } from "../i18n";
 import { currentUser, isOperator, pb } from "../lib/pb";
 import { DEFAULT_CATEGORY_ON, type Category, type Point, type Service } from "../types";
 
+function mergeById(base: Point[], extra: Point[]): Point[] {
+  const map = new Map<string, Point>();
+  for (const p of base) map.set(p.id, p);
+  for (const p of extra) {
+    if (!map.has(p.id)) map.set(p.id, p);
+  }
+  return [...map.values()];
+}
+
 export function MapPage({ intervalDays }: { intervalDays: number }) {
   const nav = useNavigate();
   const user = currentUser();
   const [points, setPoints] = useState<Point[]>([]);
+  const [pendingMine, setPendingMine] = useState(0);
   const [q, setQ] = useState("");
   const [cats, setCats] = useState<Record<string, boolean>>({ ...DEFAULT_CATEGORY_ON });
   const [services, setServices] = useState<Service[]>([]);
@@ -21,29 +30,43 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
   useEffect(() => {
     let live = true;
     (async () => {
+      let feedPoints: Point[] = [];
       try {
         const feed = await fetch("/api/feed.geojson").then((r) => {
           if (!r.ok) throw new Error("feed");
           return r.json();
         });
-        const mapped: Point[] = (feed.features || []).map((f: { properties: Point; geometry: { coordinates: number[] } }) => ({
+        feedPoints = (feed.features || []).map((f: { properties: Point; geometry: { coordinates: number[] } }) => ({
           ...f.properties,
           public_lon: f.geometry.coordinates[0],
           public_lat: f.geometry.coordinates[1],
           status: "verified" as const,
         }));
-        if (live) setPoints(mapped);
       } catch {
         try {
-          const res = await pb.collection("points").getFullList<Point>({
+          feedPoints = await pb.collection("points").getFullList<Point>({
             filter: 'status = "verified" && blocked = false && category != "potrzeba"',
             sort: "-updated_at",
           });
-          if (live) setPoints(res);
         } catch {
-          /* empty */
+          feedPoints = [];
         }
       }
+      let extra: Point[] = [];
+      const u = currentUser();
+      if (u) {
+        const filter = isOperator(u)
+          ? 'status = "pending" && category != "potrzeba"'
+          : `created_by = "${u.id}" && status = "pending" && category != "potrzeba"`;
+        try {
+          extra = await pb.collection("points").getFullList<Point>({ filter });
+        } catch {
+          extra = [];
+        }
+      }
+      if (!live) return;
+      setPendingMine(extra.length);
+      setPoints(mergeById(feedPoints, extra));
     })();
     return () => {
       live = false;
@@ -123,7 +146,7 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
           </div>
         ) : null}
         <FilterChips cats={cats} services={services} onToggleCat={toggleCat} onToggleSvc={toggleSvc} />
-        <Legend />
+        {pendingMine ? <p className="map-hint">{t("map.oczekujeHint")}</p> : null}
       </div>
       {tileWarn ? (
         <div className="warn-offline">
@@ -145,9 +168,6 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
       >
         + {t("nav.zglos")}
       </button>
-      <Link to="/prywatnosc" className="no-print" style={{ position: "absolute", left: 10, bottom: 72, fontSize: 12, zIndex: 4 }}>
-        {t("nav.prywatnosc")}
-      </Link>
     </div>
   );
 }

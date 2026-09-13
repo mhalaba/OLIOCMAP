@@ -144,7 +144,7 @@ export const DEFAULT_CATEGORY_ON: Record<Category, boolean> = {
   woda: true,
   prad: false,
   lacznosc: false,
-  przemysl: false,
+  przemysl: true,
   potrzeba: false,
 };
 
@@ -162,3 +162,40 @@ export const ALL_CATEGORIES: Category[] = [
 export const PUBLIC_CATEGORIES: Category[] = ALL_CATEGORIES.filter((c) => c !== "potrzeba");
 
 export const SERVICE_FILTERS: Service[] = ["ladowanie", "ogrzewanie", "woda", "internet", "nocleg"];
+
+export const SERVICE_OPTIONS: Service[] = [
+  "ladowanie",
+  "ogrzewanie",
+  "woda",
+  "internet",
+  "posilek",
+  "nocleg",
+  "pierwsza_pomoc",
+  "toaleta",
+  "informacja",
+  "zwierzeta",
+];
+
+export const CAPABILITY_OPTIONS: Capability[] = [
+  "warsztat",
+  "spawanie",
+  "zywnosc",
+  "woda",
+  "paliwo_detal",
+  "leki_wydawanie",
+  "transport",
+  "magazyn",
+  "agregat",
+  "sprzet_ciezki",
+  "nocleg",
+];
+
+export const LINK_TYPE_OPTIONS: LinkType[] = [
+  "starlink",
+  "wifi_publiczne",
+  "pmr446",
+  "cb",
+  "meshtastic",
+  "radioamator",
+  "telefon_satelitarny",
+];

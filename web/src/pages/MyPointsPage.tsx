@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { t } from "../i18n";
-import { currentUser, pb } from "../lib/pb";
+import { currentUser, isOfflineError, pb, pbErrorMessage } from "../lib/pb";
 import { queueAll, queueRemove, type QueuedItem } from "../lib/queue";
-import type { Point } from "../types";
+import { CATEGORY_COLORS, type Point } from "../types";
 
 export function MyPointsPage() {
   const nav = useNavigate();
@@ -36,8 +36,12 @@ export function MyPointsPage() {
       try {
         await pb.collection("points").create(q.payload);
         await queueRemove(q.id);
-      } catch {
-        setMsg(t("err.siec"));
+      } catch (err) {
+        if (isOfflineError(err)) {
+          setMsg(t("err.siec"));
+          return;
+        }
+        setMsg(pbErrorMessage(err, t("err.ogolny")));
         return;
       }
     }
@@ -65,6 +69,9 @@ export function MyPointsPage() {
       {!items.length ? <p>{t("empty.moje")}</p> : null}
       {items.map((p) => (
         <article key={p.id} className="card">
+          <span className="cat-badge" style={{ background: CATEGORY_COLORS[p.category] }}>
+            {t("cat." + p.category)}
+          </span>
           <h2>{p.title}</h2>
           <p>
             {t("cat." + p.category)} · {t("status." + p.status)}

@@ -3,9 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { t } from "../i18n";
 import { currentUser, isOperator, pb } from "../lib/pb";
 import { freshnessLabel, isPresentDate } from "../lib/format";
-import type { Point } from "../types";
+import { CATEGORY_COLORS, type Point } from "../types";
 
-type Tab = "kolejka" | "potwierdzenia" | "potrzeby" | "bledy" | "uzytkownicy";
+type Tab = "kolejka" | "potwierdzenia" | "potrzeby" | "bledy";
 
 async function loadPoints(filter: string): Promise<Point[]> {
   let lastErr: unknown;
@@ -33,7 +33,6 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
   const [counts, setCounts] = useState({ kolejka: 0, potwierdzenia: 0, potrzeby: 0 });
   const [loadErr, setLoadErr] = useState("");
   const [reports, setReports] = useState<{ id: string; point_id: string; reason: string; text: string; handled: boolean }[]>([]);
-  const [users, setUsers] = useState<{ id: string; email: string; name: string; role: string }[]>([]);
 
   useEffect(() => {
     if (!isOperator(user)) {
@@ -79,14 +78,6 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
       setReports(r);
     } catch {
       setReports([]);
-    }
-    if (user?.role === "admin") {
-      try {
-        const u = await pb.collection("users").getFullList<{ id: string; email: string; name: string; role: string }>();
-        setUsers(u);
-      } catch {
-        setUsers([]);
-      }
     }
   }
 
@@ -142,6 +133,8 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
       <p className="page-links">
         <Link to="/status">{t("nav.status")}</Link>
         {" · "}
+        <Link to="/admin">{t("nav.konta")}</Link>
+        {" · "}
         <Link to="/prywatnosc">{t("nav.prywatnosc")}</Link>
       </p>
       {loadErr ? (
@@ -163,11 +156,6 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
             </button>
           );
         })}
-        {user?.role === "admin" ? (
-          <button type="button" className={tab === "uzytkownicy" ? "on" : ""} onClick={() => setTab("uzytkownicy")}>
-            {t("op.uzytkownicy")}
-          </button>
-        ) : null}
         <Link to="/operator/wezly" className="btn ghost">
           {t("op.wezly")}
         </Link>
@@ -177,10 +165,11 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
         (pending.length ? (
           pending.map((p) => (
             <article key={p.id} className="card">
+              <span className="cat-badge" style={{ background: CATEGORY_COLORS[p.category] }}>
+                {t("cat." + p.category)}
+              </span>
               <h2>{p.title}</h2>
-              <p>
-                {t("cat." + p.category)} · {p.address || `${p.lat}, ${p.lon}`}
-              </p>
+              <p>{p.address || `${p.lat}, ${p.lon}`}</p>
               {p.reporter_role === "zaufany" ? <p className="fresh">{t("op.zaufany")}</p> : null}
               {p.conflict ? <p className="stale">{t("status.conflict")}</p> : null}
               <div className="queue-actions">
@@ -265,30 +254,6 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
           ))
         ) : (
           <p>{t("op.pusteBledy")}</p>
-        ))}
-
-      {tab === "uzytkownicy" &&
-        users.map((u) => (
-          <article key={u.id} className="card">
-            <p>
-              {u.name} · {u.email} · {u.role}
-            </p>
-            {user?.role === "admin" ? (
-              <select
-                value={u.role}
-                onChange={async (e) => {
-                  await pb.collection("users").update(u.id, { role: e.target.value });
-                  await reload();
-                }}
-              >
-                {["citizen", "zaufany", "operator", "admin"].map((r) => (
-                  <option key={r} value={r}>
-                    {t("role." + r)}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-          </article>
         ))}
     </div>
   );

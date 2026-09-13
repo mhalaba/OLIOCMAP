@@ -99,6 +99,17 @@ export function StatusPage() {
   return (
     <div className="page">
       <h1>{t("statusPage.wezel")}</h1>
+      <p className="page-links">
+        {op ? (
+          <>
+            <Link to="/operator">{t("nav.operator")}</Link>
+            {" · "}
+            <Link to="/admin">{t("nav.konta")}</Link>
+            {" · "}
+          </>
+        ) : null}
+        <Link to="/prywatnosc">{t("nav.prywatnosc")}</Link>
+      </p>
       <div className="card">
         <p>
           <strong>{st?.node_name}</strong> ({st?.node_id})

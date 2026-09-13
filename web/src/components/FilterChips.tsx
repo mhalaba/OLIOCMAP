@@ -16,7 +16,7 @@ export function FilterChips({
 }) {
   const list = showPotrzeba ? ([...PUBLIC_CATEGORIES, "potrzeba"] as Category[]) : PUBLIC_CATEGORIES;
   return (
-    <div>
+    <div className="filters">
       <div className="chips" role="group" aria-label={t("map.filtry")}>
         {list.map((c) => {
           const on = !!cats[c];
@@ -26,25 +26,37 @@ export function FilterChips({
               key={c}
               type="button"
               className={`chip ${on ? "on" : ""}`}
-              style={on ? { background: color } : { color }}
+              style={on ? { background: color, color: c === "prad" ? "#1a1714" : "#fff" } : { color }}
               onClick={() => onToggleCat(c)}
             >
-              <span className="dot" style={{ background: on ? "#fff" : color }} />
+              <span className="dot" style={{ background: on ? (c === "prad" ? "#1a1714" : "#fff") : color }} />
               {t(`cat.${c}`)}
             </button>
           );
         })}
       </div>
-      <div className="chips" style={{ marginTop: 6 }}>
-        {SERVICE_FILTERS.map((s) => {
-          const on = services.includes(s);
-          return (
-            <button key={s} type="button" className={`chip ${on ? "on" : ""}`} style={on ? { background: "#1a1714", color: "#fff" } : {}} onClick={() => onToggleSvc(s)}>
-              {t(`svc.${s}`)}
-            </button>
-          );
-        })}
-      </div>
+      <details className="filter-more">
+        <summary>
+          {t("map.uslugiFiltr")}
+          {services.length ? ` (${services.length})` : ""}
+        </summary>
+        <div className="chips wrap" style={{ marginTop: 8 }}>
+          {SERVICE_FILTERS.map((s) => {
+            const on = services.includes(s);
+            return (
+              <button
+                key={s}
+                type="button"
+                className={`chip ${on ? "on" : ""}`}
+                style={on ? { background: "#1a1714", color: "#fff" } : {}}
+                onClick={() => onToggleSvc(s)}
+              >
+                {t(`svc.${s}`)}
+              </button>
+            );
+          })}
+        </div>
+      </details>
     </div>
   );
 }

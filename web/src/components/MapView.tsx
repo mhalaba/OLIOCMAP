@@ -25,10 +25,11 @@ function toFeatures(points: Point[], cats: Record<string, boolean>, services: Se
   for (const p of points) {
     if (isPresentDate(p.deleted_at)) continue;
     if (p.blocked) continue;
-    if (p.status !== "verified" && p.category !== "potrzeba") continue;
+    if (p.status !== "verified" && p.status !== "pending") continue;
     if (!cats[p.category]) continue;
     if (p.category === "potrzeba") continue;
     const svcs = asArray<Service>(p.services);
+    const caps = asArray<string>(p.capability);
     if (services.length && !services.every((s) => svcs.includes(s))) continue;
     const lat = p.public_lat ?? p.lat;
     const lon = p.public_lon ?? p.lon;
@@ -47,12 +48,14 @@ function toFeatures(points: Point[], cats: Record<string, boolean>, services: Se
         activation: activationText(p.activation, p.activation_hours),
         autonomy: p.autonomy_h || 0,
         services: svcs.join(","),
+        capability: caps.join(","),
         source_node: p.source_node || "",
         fresh: fresh.text,
         address: p.address || "",
         capacity: p.capacity || 0,
         host_type: p.host_type || "",
         geom: p.public_geom || "precise",
+        pending: p.status === "pending" ? 1 : 0,
         plat: lat,
         plon: lon,
       },
@@ -65,22 +68,29 @@ function popupHtml(props: Record<string, unknown>): string {
   const cat = String(props.category || "");
   const color = CATEGORY_COLORS[cat as Category] || "#333";
   const stale = props.stale === true || props.stale === "true";
+  const pending = props.pending === 1 || props.pending === "1";
   const svcs = String(props.services || "")
     .split(",")
     .filter(Boolean)
     .map((s) => t(`svc.${s}`))
+    .join(" · ");
+  const caps = String(props.capability || "")
+    .split(",")
+    .filter(Boolean)
+    .map((s) => t(`cap.${s}`))
     .join(" · ");
   const auto = Number(props.autonomy) ? `Autonomia ${props.autonomy} h` : "";
   const cap = Number(props.capacity) ? `${props.capacity} os.` : "";
   return `<div class="popup">
     <span class="cat-badge" style="background:${color}">${t("cat." + cat)}</span>
     <h3>${escapeHtml(String(props.title || ""))}</h3>
-    <div class="${stale ? "stale" : "fresh"}">${escapeHtml(String(props.fresh || ""))}</div>
+    ${pending ? `<div class="stale">${escapeHtml(t("status.pending"))}</div>` : `<div class="${stale ? "stale" : "fresh"}">${escapeHtml(String(props.fresh || ""))}</div>`}
     ${props.activation ? `<div>${escapeHtml(String(props.activation))}</div>` : ""}
     ${props.hours ? `<div>${escapeHtml(String(props.hours))}</div>` : ""}
     ${auto ? `<div>${auto}</div>` : ""}
     ${cap ? `<div>${cap}</div>` : ""}
     ${svcs ? `<div>${escapeHtml(svcs)}</div>` : ""}
+    ${caps ? `<div>${escapeHtml(caps)}</div>` : ""}
     ${props.source_node ? `<div style="font-size:12px;opacity:.7">${escapeHtml(String(props.source_node))}</div>` : ""}
     <div class="row" style="margin-top:8px">
       <a class="btn primary" href="geo:${props.plat},${props.plon}">${t("map.nawiguj")}</a>
@@ -163,6 +173,7 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
       }
       if (cancelled || !ref.current) return;
       onTilesMissing?.(missing, onlineFallback);
+      const wide = window.innerWidth >= 860;
       const map = new maplibregl.Map({
         container: ref.current,
         style,
@@ -170,6 +181,11 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
         zoom: 12,
         attributionControl: { compact: true },
       });
+      if (pickMode) {
+        map.setPadding(
+          wide ? { top: 12, bottom: 12, left: 12, right: 400 } : { top: 8, bottom: 300, left: 8, right: 8 }
+        );
+      }
       if (cancelled) {
         map.remove();
         return;
@@ -201,9 +217,24 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
           filter: ["!", ["has", "point_count"]],
           paint: {
             "circle-color": ["get", "color"],
-            "circle-radius": 9,
-            "circle-stroke-width": ["case", ["==", ["get", "stale"], true], 3, 1.5],
-            "circle-stroke-color": ["case", ["==", ["get", "stale"], true], "#c2410c", "#fff"],
+            "circle-opacity": ["case", ["==", ["get", "pending"], 1], 0.32, 0.92],
+            "circle-radius": ["case", ["==", ["get", "pending"], 1], 8, 9],
+            "circle-stroke-width": [
+              "case",
+              ["==", ["get", "pending"], 1],
+              2.6,
+              ["==", ["get", "stale"], true],
+              3,
+              1.5,
+            ],
+            "circle-stroke-color": [
+              "case",
+              ["==", ["get", "pending"], 1],
+              "#1a1714",
+              ["==", ["get", "stale"], true],
+              "#c2410c",
+              "#fff",
+            ],
           },
         });
       });
@@ -226,6 +257,12 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
       map.on("click", (e) => {
         if (pickMode && onPick) onPick(e.lngLat.lat, e.lngLat.lng);
       });
+      if (pickMode && onPick) {
+        map.on("moveend", () => {
+          const c = map.getCenter();
+          onPick(c.lat, c.lng);
+        });
+      }
       mapRef.current = map;
     })();
     return () => {

@@ -139,7 +139,10 @@ module.exports.create = function(e) {
 
     var role = e.auth ? e.auth.get("role") : "citizen";
     rec.set("reporter_role", role || "citizen");
-    var auto = env.get("AUTO_VERIFY_TRUSTED", "false") === "true" && role === "zaufany";
+    var categoryEarly = rec.get("category");
+    var autoTrusted = env.get("AUTO_VERIFY_TRUSTED", "false") === "true" && role === "zaufany";
+    var autoStaff = role === "operator" || role === "admin";
+    var auto = (autoTrusted || autoStaff) && categoryEarly !== "potrzeba";
     rec.set("status", auto ? "verified" : "pending");
     if (auto) {
       rec.set("verified_by_node", nodeId());

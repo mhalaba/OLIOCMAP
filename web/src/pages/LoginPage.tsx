@@ -42,6 +42,9 @@ export function LoginPage() {
       <p>
         {t("auth.konto")} <Link to={"/rejestracja?next=" + encodeURIComponent(next)}>{t("auth.zarejestruj")}</Link>
       </p>
+      <p className="footer-node">
+        <Link to="/prywatnosc">{t("nav.prywatnosc")}</Link>
+      </p>
     </div>
   );
 }

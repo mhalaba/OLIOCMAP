@@ -1,6 +1,6 @@
 # Mapa Kryzysowa
 
-Lokalna mapa pomocy ludności dla gminy: Punkty Odporności, schrony / MDS, AED, woda, prąd, łączność i zdolności lokalne. Węzeł stoi zwykle w remizie OSP albo w urzędzie gminy i **działa bez internetu, bez GPS i bez centrali**.
+Lokalna mapa pomocy ludności dla gminy: Punkty Odporności, schrony / MDS, AED, woda, prąd, łączność oraz przemysł i zaplecze (warsztat, spawanie, magazyn). Węzeł stoi zwykle w remizie OSP albo w urzędzie gminy i **działa bez internetu, bez GPS i bez centrali**.
 
 To nie jest system alarmowania (Alert RCB / RSO), nie wyznacza ewakuacji i **nie mapuje infrastruktury krytycznej**. „Punkt Odporności” to nazwa produktu (koncepcja ukraińska), nie termin z ustawy o ochronie ludności.
 
@@ -18,11 +18,12 @@ Wejdź na `http://<IP-węzła>/` (albo `http://127.0.0.1/` na samym urządzeniu)
 
 Konta demo (**usuń przed produkcją**):
 
+- administrator aplikacji: `admin@demo.local` / `demo12345` (panel `/admin` — dodawanie kont)
 - operator: `operator@demo.local` / `demo12345`
 - mieszkaniec: `mieszkaniec@demo.local` / `demo12345`
-- superuser PocketBase: wartości z `.env` (`PB_SUPERUSER_EMAIL`)
+- superuser PocketBase: wartości z `.env` (`PB_SUPERUSER_EMAIL`) — to **nie** jest konto w aplikacji
 
-Panel PocketBase: `http://<IP>/_/`. Aplikacja operatora: `/operator`.
+Panel PocketBase: `http://<IP>/_/`. Kolejka operatora: `/operator`. Panel kont: `/admin`.
 
 ## Jak dołączyć centralę
 

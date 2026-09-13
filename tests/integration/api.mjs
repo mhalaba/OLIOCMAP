@@ -111,6 +111,41 @@ const run = async () => {
   assert(created.data.status === "pending", "pending");
   const pid = created.data.id;
 
+  const opPoint = await json(`${BASE}/api/collections/points/records`, {
+    method: "POST",
+    headers: { Authorization: op, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      category: "odpornosc",
+      title: "Punkt Odporności — zapis operatora",
+      lat: 50.342,
+      lon: 18.912,
+      consent: true,
+    }),
+  });
+  assert(opPoint.res.ok, "operator create " + JSON.stringify(opPoint.data));
+  assert(opPoint.data.status === "verified", "operator auto verified");
+
+  const adminTok = await auth("admin@demo.local", "demo12345");
+  const listed = await json(`${BASE}/api/collections/users/records?perPage=50`, {
+    headers: { Authorization: op },
+  });
+  assert(listed.res.ok, "operator listuje uzytkownikow");
+  const newEmail = `n${Date.now()}@demo.local`;
+  const createdUser = await json(`${BASE}/api/collections/users/records`, {
+    method: "POST",
+    headers: { Authorization: adminTok, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: "Nowy z panelu",
+      email: newEmail,
+      password: "demo12345",
+      passwordConfirm: "demo12345",
+      role: "operator",
+      emailVisibility: true,
+    }),
+  });
+  assert(createdUser.res.ok, "admin create user " + JSON.stringify(createdUser.data));
+  assert(createdUser.data.role === "operator", "admin nadaje role operator");
+
   const ownerEdit = await json(`${BASE}/api/collections/points/records/${pid}`, {
     method: "PATCH",
     headers: { Authorization: cit, "Content-Type": "application/json" },

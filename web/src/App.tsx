@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Banner } from "./components/Banner";
 import { BottomNav } from "./components/BottomNav";
-import { currentUser, fetchConfig, fetchStatus, pb } from "./lib/pb";
+import { currentUser, fetchConfig, fetchStatus, isOfflineError, pb } from "./lib/pb";
 import { queueAll, queueRemove } from "./lib/queue";
 import { AddPointPage } from "./pages/AddPointPage";
+import { AdminPage } from "./pages/AdminPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MapPage } from "./pages/MapPage";
 import { CertPage, NodesPage, ReportPage } from "./pages/MiscPages";
@@ -73,8 +74,10 @@ export default function App() {
         try {
           await pb.collection("points").create(it.payload);
           await queueRemove(it.id);
-        } catch {
-          break;
+        } catch (err) {
+          const status = err && typeof err === "object" && "status" in err ? Number((err as { status?: number }).status) : 0;
+          if (status === 401 || status === 403 || isOfflineError(err)) break;
+          await queueRemove(it.id);
         }
       }
     }
@@ -94,6 +97,7 @@ export default function App() {
         <Route path="/moje" element={<MyPointsPage />} />
         <Route path="/status" element={<StatusPage />} />
         <Route path="/operator" element={<OperatorPage intervalDays={intervalDays} />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="/operator/wezly" element={<NodesPage />} />
         <Route path="/wydruk" element={<PrintPage />} />
         <Route path="/prywatnosc" element={<PrivacyPage />} />

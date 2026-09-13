@@ -18,10 +18,15 @@ export function BottomNav({ user, pendingCount }: { user: AuthUser | null; pendi
         {t("nav.moje")}
       </NavLink>
       {isOperator(user) ? (
-        <NavLink to="/operator" className={({ isActive }) => (isActive ? "active" : "")}>
-          {t("nav.operator")}
-          {pendingCount ? <span className="badge">{pendingCount}</span> : null}
-        </NavLink>
+        <>
+          <NavLink to="/operator" className={({ isActive }) => (isActive ? "active" : "")}>
+            {t("nav.operator")}
+            {pendingCount ? <span className="badge">{pendingCount}</span> : null}
+          </NavLink>
+          <NavLink to="/admin" className={({ isActive }) => (isActive ? "active" : "")}>
+            {t("nav.konta")}
+          </NavLink>
+        </>
       ) : user ? (
         <NavLink to="/status" className={({ isActive }) => (isActive ? "active" : "")}>
           {t("nav.status")}
