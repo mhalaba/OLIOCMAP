@@ -54,17 +54,17 @@ export function RegisterPage() {
     <div className="page">
       <h1>{t("auth.zarejestruj")}</h1>
       <form onSubmit={onSubmit} className="card">
-        <label className="field">
+        <label className="field" htmlFor="reg-name">
           <span>{t("auth.imie")}</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={60} />
+          <input id="reg-name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={60} />
         </label>
-        <label className="field">
+        <label className="field" htmlFor="reg-email">
           <span>{t("auth.email")}</span>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input id="reg-email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
-        <label className="field">
+        <label className="field" htmlFor="reg-haslo">
           <span>{t("auth.haslo")}</span>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+          <input id="reg-haslo" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
         </label>
         {mode === "invite" ? (
           <label className="field">

@@ -3,8 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test unit/*.test.mjs && node integration/api.mjs && npx playwright test --config e2e/playwright.config.ts",
-    "unit": "node --test unit/*.test.mjs",
+    "test": "node ../scripts/check-schema.mjs && node --test unit/*.test.mjs && node integration/api.mjs && npx playwright test --config e2e/playwright.config.ts",
     "unit": "node --test unit/*.test.mjs",
     "int": "node integration/api.mjs",
     "e2e": "playwright test --config e2e/playwright.config.ts"

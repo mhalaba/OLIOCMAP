@@ -99,7 +99,7 @@ routerAdd("GET", "/api/status", (e) => {
   try { expire.run(e.app); } catch (err) {}
   var rec;
   try {
-    rec = e.app.findRecordById("node_status", "self");
+    rec = e.app.findRecordById("node_status", env.SELF_ID);
   } catch (err) {
     rec = null;
   }

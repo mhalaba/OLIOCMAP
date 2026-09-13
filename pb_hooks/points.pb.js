@@ -23,11 +23,11 @@ function nodeId() {
 function nextHlc(app) {
   var rec;
   try {
-    rec = app.findRecordById("hlc_state", "self");
+    rec = app.findRecordById("hlc_state", env.SELF_ID);
   } catch (e) {
     var col = app.findCollectionByNameOrId("hlc_state");
     rec = new Record(col);
-    rec.id = "self";
+    rec.id = env.SELF_ID;
     rec.set("last_ms", 0);
     rec.set("counter", 0);
   }
@@ -314,10 +314,7 @@ onRecordEnrich((e) => {
     rec.hide("lat");
     rec.hide("lon");
     rec.hide("assigned_to");
-    rec.hide("sig");
-    rec.hide("relay_sig");
     rec.hide("field_hlc");
-    rec.hide("hlc");
     if (rec.get("public_geom") !== "precise") {
       /* public_lat/lon already rounded */
     }

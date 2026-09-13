@@ -102,13 +102,22 @@ services:
     volumes:
       - web_static:/out
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /out/index.html"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 5s
 
   caddy:
     build: ./caddy
     depends_on:
-      - web
-      - pocketbase
-      - sync-worker
+      web:
+        condition: service_healthy
+      pocketbase:
+        condition: service_healthy
+      sync-worker:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -188,14 +197,23 @@ services:
     expose:
       - "8091"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8091/sync/v1/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   central-caddy:
     profiles: ["central"]
     build: ./caddy
     depends_on:
-      - central-pocketbase
-      - central-sync
-      - web
+      central-pocketbase:
+        condition: service_healthy
+      central-sync:
+        condition: service_healthy
+      web:
+        condition: service_healthy
     ports:
       - "8092:80"
     environment:
@@ -209,6 +227,12 @@ services:
       - caddy_data_central:/data
     entrypoint: ["sh", "/entrypoint.sh"]
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
 
 volumes:
   pb_data:

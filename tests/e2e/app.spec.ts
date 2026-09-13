@@ -12,8 +12,8 @@ test("1. rejestracja i AED w Moje jako Oczekuje", async ({ page }) => {
   const email = `o${Date.now()}@demo.local`;
   await page.goto("/rejestracja");
   await page.getByLabel(/Imię/).fill("Ola Test");
-  await page.locator('input').nth(1).fill(email);
-  await page.locator('input[type="password"]').fill("demo12345");
+  await page.getByLabel(/Adres e-mail/).fill(email);
+  await page.getByLabel(/Hasło/).fill("demo12345");
   await page.getByRole("button", { name: "Zarejestruj" }).click();
   await page.waitForURL(/\/$|\/dodaj/);
   await page.goto("/dodaj");
@@ -26,8 +26,8 @@ test("1. rejestracja i AED w Moje jako Oczekuje", async ({ page }) => {
 
 test("2. operator weryfikuje — punkt na mapie anonimowo", async ({ page, context }) => {
   await page.goto("/login");
-  await page.locator("input").first().fill("operator@demo.local");
-  await page.locator('input[type="password"]').fill("demo12345");
+  await page.getByLabel(/Adres e-mail/).fill("operator@demo.local");
+  await page.getByLabel(/Hasło/).fill("demo12345");
   await page.getByRole("button", { name: "Zaloguj" }).click();
   await page.goto("/operator");
   const verify = page.getByRole("button", { name: "Weryfikuj" }).first();
@@ -48,8 +48,8 @@ test("3. TRYB WYSPA po odłączeniu centrali — dodawanie działa", async ({ pa
   await page.goto("/");
   await expect(page.getByText(/TRYB WYSPA/)).toBeVisible({ timeout: 60000 });
   await page.goto("/login");
-  await page.locator("input").first().fill("operator@demo.local");
-  await page.locator('input[type="password"]').fill("demo12345");
+  await page.getByLabel(/Adres e-mail/).fill("operator@demo.local");
+  await page.getByLabel(/Hasło/).fill("demo12345");
   await page.getByRole("button", { name: "Zaloguj" }).click();
   await page.goto("/dodaj");
   await page.getByRole("button", { name: "Punkt Odporności" }).first().click();
@@ -70,7 +70,9 @@ test("4. po podłączeniu centrali punkt z podpisem", async ({ page }) => {
     try {
       const res = await fetch(`${central}/api/collections/points/records?perPage=50`);
       const data = await res.json();
-      const row = (data.items || []).find((p: { sig?: string; source_node?: string }) => p.sig && p.source_node);
+      const row = (data.items || []).find(
+        (p: { sig?: string; source_node?: string }) => p.sig && p.source_node && p.source_node !== "central-01"
+      );
       if (row?.sig) {
         found = true;
         break;
@@ -82,11 +84,18 @@ test("4. po podłączeniu centrali punkt z podpisem", async ({ page }) => {
 });
 
 test("5. offline: powłoka i kolejka zapisu", async ({ page, context }) => {
+  await page.goto("/login");
+  await page.getByLabel(/Adres e-mail/).fill("mieszkaniec@demo.local");
+  await page.getByLabel(/Hasło/).fill("demo12345");
+  await page.getByRole("button", { name: "Zaloguj" }).click();
   await page.goto("/");
   await expect(page.locator(".map-el")).toBeVisible();
+  await page.goto("/dodaj");
   await context.setOffline(true);
-  await page.reload();
-  await expect(page.locator("#root")).toBeVisible();
+  await page.getByRole("button", { name: "AED" }).click();
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Zapisz" }).click();
+  await expect(page.getByText(/Zapisano na telefonie/)).toBeVisible({ timeout: 15000 });
   await context.setOffline(false);
 });
 
@@ -111,9 +120,24 @@ test("7. potrzeba nie w feed; wygasa po TTL", async () => {
   const base = process.env.BASE_URL || "http://127.0.0.1";
   const feed = await fetch(`${base}/api/feed.geojson`).then((r) => r.json());
   expect(feed.features.every((f: { properties: { category: string } }) => f.properties.category !== "potrzeba")).toBeTruthy();
-  await fetch(`${base}/api/status`);
-  await new Promise((r) => setTimeout(r, 2000));
-  await fetch(`${base}/api/status`);
+  const opAuth = await fetch(`${base}/api/collections/users/auth-with-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identity: "operator@demo.local", password: "demo12345" }),
+  }).then((r) => r.json());
+  let expired = false;
+  for (let i = 0; i < 40; i++) {
+    await fetch(`${base}/api/status`);
+    const list = await fetch(`${base}/api/collections/points/records?filter=${encodeURIComponent('category="potrzeba"')}&perPage=20`, {
+      headers: { Authorization: opAuth.token },
+    }).then((r) => r.json());
+    if ((list.items || []).some((p: { status: string }) => p.status === "expired")) {
+      expired = true;
+      break;
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  expect(expired).toBeTruthy();
 });
 
 test("8. nieznany węzeł 403 i rekord peera", async () => {

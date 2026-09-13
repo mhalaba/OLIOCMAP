@@ -124,6 +124,9 @@ Scenariusze (także ręcznie):
 - Przypisanie gminy z `gminy.geojson` — P1.
 - Service worker wymaga HTTPS albo localhost.
 - Brak kafelków PMTiles = pusta podkładka offline (punkty i tak się rysują).
+- PocketBase wymaga klucza głównego 15–40 znaków `[a-z0-9-]`. Frontend nadal nadaje UUIDv7 (36 znaków ze myślnikami); singleton `node_status` / `hlc_state` ma stałe id `self00000000000`.
+- Centrala nie wgrywa punktów demo (unikamy kolizji identyfikatorów przy sync).
 - Zegary bez RTC psują HLC — czytaj docs/sprzet.md.
+- Cluster na mapie bez etykiet liczbowych (brak lokalnych glifów PBF).
 
 Profil `dev`: `docker compose --profile dev up` (Vite :5173 z proxy).

@@ -26,13 +26,13 @@ export function LoginPage() {
     <div className="page">
       <h1>{t("auth.zaloguj")}</h1>
       <form onSubmit={onSubmit} className="card">
-        <label className="field">
+        <label className="field" htmlFor="login-email">
           <span>{t("auth.email")}</span>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+          <input id="login-email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
         </label>
-        <label className="field">
+        <label className="field" htmlFor="login-haslo">
           <span>{t("auth.haslo")}</span>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+          <input id="login-haslo" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
         </label>
         {err ? <p className="note">{err}</p> : null}
         <button className="btn primary block" type="submit">

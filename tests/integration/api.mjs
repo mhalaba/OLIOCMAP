@@ -125,14 +125,15 @@ const run = async () => {
   });
   assert(ownerVerify.data.status === "pending" || !ownerVerify.res.ok || ownerVerify.data.status !== "verified", "owner nie weryfikuje");
 
-  const opGet = await json(`${BASE}/api/collections/points/records/${"018f0a000000700080000000000003"}`, {
+  const opGet = await json(`${BASE}/api/collections/points/records?filter=${encodeURIComponent('category="lacznosc"')}&perPage=1`, {
     headers: { Authorization: op },
   });
-  const anonGet = await json(`${BASE}/api/collections/points/records/${"018f0a000000700080000000000003"}`);
+  const anonGet = await json(`${BASE}/api/collections/points/records?filter=${encodeURIComponent('category="lacznosc"')}&perPage=1`);
   if (opGet.res.ok && anonGet.res.ok) {
-    const olat = opGet.data.lat;
-    const alat = anonGet.data.lat;
-    const apub = anonGet.data.public_lat;
+    const olat = (opGet.data.items || [])[0] && opGet.data.items[0].lat;
+    const aitem = (anonGet.data.items || [])[0] || {};
+    const alat = aitem.lat;
+    const apub = aitem.public_lat;
     if (olat) {
       assert(alat === undefined || alat === 0 || Math.abs(olat - (apub || 0)) > 0.0001 || apub !== olat, "operator widzi precyzyjne");
     }

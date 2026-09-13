@@ -6,13 +6,15 @@ function env(key, fallback) {
   return v;
 }
 
-function flexibleId(collection) {
-  var id = collection.fields.getByName("id");
+function patchRecordId(app, name) {
+  var c = app.findCollectionByNameOrId(name);
+  var id = c.fields.getByName("id");
   if (!id) return;
-  id.min = 3;
+  id.min = 15;
   id.max = 40;
   id.pattern = "^[a-z0-9-]+$";
   id.autogeneratePattern = "[a-z0-9]{15}";
+  app.save(c);
 }
 
 migrate((app) => {
@@ -60,6 +62,7 @@ migrate((app) => {
   }
 
   app.save(users);
+  patchRecordId(app, "users");
 }, (app) => {
   /* keep users */
 });

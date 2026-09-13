@@ -1,3 +1,5 @@
+var env = require(`${__hooks}/lib/env.js`);
+
 module.exports = {
   isDeleted: function (rec) {
     var d = rec.get("deleted_at");
@@ -6,13 +8,24 @@ module.exports = {
   run: function (app) {
     var records = app.findAllRecords("points");
     var now = Date.now();
+    var ttlH = Number(env.get("POTRZEBA_TTL_H", "72")) || 72;
+    if (ttlH < 0) ttlH = 72;
     for (var i = 0; i < records.length; i++) {
       var r = records[i];
       if (r.get("category") !== "potrzeba") continue;
       if (module.exports.isDeleted(r)) continue;
       var exp = r.getDateTime("expires_at");
-      if (!exp || exp.unix() <= 0) continue;
-      var expMs = exp.unix() * 1000;
+      var expMs = 0;
+      if (exp && exp.unix() > 0) {
+        expMs = exp.unix() * 1000;
+      } else {
+        var created = r.getDateTime("created");
+        if (created && created.unix() > 0) {
+          expMs = created.unix() * 1000 + ttlH * 3600 * 1000;
+        } else {
+          continue;
+        }
+      }
       if (now >= expMs && r.get("status") !== "expired") {
         r.set("status", "expired");
         app.save(r);

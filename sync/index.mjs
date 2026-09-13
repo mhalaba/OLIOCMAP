@@ -12,6 +12,7 @@ import { recordToRow, rowToBody } from "./rows.mjs";
 import { canonicalJson } from "../shared/canonical.mjs";
 
 const pb = createPb();
+const SELF_STATUS_ID = "self00000000000";
 const backoff = new Map();
 let keyPair = null;
 let publicB64 = "";
@@ -60,10 +61,21 @@ async function logSync(direction, peer, ok, count, error) {
 async function updateSelfStatus(patch) {
   try {
     const body = { node_id: cfg.nodeId, public_key: publicB64, ...patch };
-    await pb.upsert("node_status", "self", body);
+    await pb.upsert("node_status", SELF_STATUS_ID, body);
   } catch (err) {
     console.error("node_status", err.message);
   }
+}
+
+async function upsertRemoteNodeStatus(nid, body) {
+  const safe = String(nid).replace(/"/g, "");
+  const items = await pb.listAll("node_status", `node_id="${safe}"`);
+  const existing = items.find((r) => r.id !== SELF_STATUS_ID) || items[0];
+  const payload = { ...body, node_id: nid };
+  if (existing) {
+    return pb.patch(`/api/collections/node_status/records/${existing.id}`, payload);
+  }
+  return pb.post("/api/collections/node_status/records", payload);
 }
 
 async function getPeerRecords() {
@@ -549,8 +561,7 @@ async function handle(req, res) {
         json(400, { error: "brak node_id" });
         return;
       }
-      const id = String(nid).slice(0, 40);
-      await pb.upsert("node_status", id, {
+      await upsertRemoteNodeStatus(nid, {
         node_id: nid,
         mode: st.mode || "wyspa",
         last_pull: st.last_pull || "",

@@ -81,8 +81,25 @@ for (const f of requiredPointFields) {
   }
 }
 
+const envExample = readFileSync(join(root, ".env.example"), "utf8");
+const envKeys = [...envExample.matchAll(/^([A-Z0-9_]+)=/gm)].map((m) => m[1]);
+const compose = readFileSync(join(root, "docker-compose.yml"), "utf8");
+const codeBlob =
+  compose +
+  readFileSync(join(root, "sync/config.mjs"), "utf8") +
+  readFileSync(join(root, "pb_hooks/lib/env.js"), "utf8") +
+  readFileSync(join(root, "caddy/entrypoint.sh"), "utf8") +
+  readFileSync(join(root, "pb_migrations/1740000003_bootstrap.js"), "utf8");
+for (const k of envKeys) {
+  if (!codeBlob.includes(k) && k !== "APP_VERSION") {
+    console.error("zmienna z .env.example nieużywana:", k);
+    failed++;
+  }
+}
+
 if (failed) {
   console.error("check-schema: BŁĄD", failed);
   process.exit(1);
 }
 console.log("check-schema: OK", uniqueCol.join(", "));
+console.log("env:", envKeys.join(", "));

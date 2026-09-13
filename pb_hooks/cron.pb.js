@@ -9,7 +9,7 @@ cronAdd("expire", "*/10 * * * *", () => {
 
 cronAdd("counts", "*/2 * * * *", () => {
   try {
-    var rec = $app.findRecordById("node_status", "self");
+    var rec = $app.findRecordById("node_status", env.SELF_ID);
     var points = $app.findAllRecords("points");
     var by_category = {};
     var by_status = {};

@@ -100,6 +100,12 @@
     "bladLogowania": "Nie udało się zalogować. Sprawdź dane.",
     "bladRejestracji": "Nie udało się założyć konta."
   },
+  "role": {
+    "citizen": "Mieszkaniec",
+    "zaufany": "Zaufany",
+    "operator": "Operator",
+    "admin": "Administrator"
+  },
   "form": {
     "zapisz": "Zapisz",
     "anuluj": "Anuluj",
@@ -108,8 +114,8 @@
     "tytul": "Nazwa",
     "opis": "Opis",
     "adres": "Adres (tekst, bez geokodera)",
-    "lat": "Szerokość (lat)",
-    "lon": "Długość (lon)",
+    "lat": "Szerokość geograficzna",
+    "lon": "Długość geograficzna",
     "kategoria": "Kategoria",
     "uslugi": "Usługi",
     "gospodarz": "Kto prowadzi",

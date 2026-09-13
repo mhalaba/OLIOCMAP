@@ -24,7 +24,7 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
   }, [user, nav]);
 
   async function reload() {
-    const all = await pb.collection("points").getFullList<Point>({ sort: "-created" });
+    const all = await pb.collection("points").getFullList<Point>({ sort: "-created", expand: "created_by" });
     setPoints(all);
     try {
       const r = await pb.collection("reports").getFullList<{ id: string; point_id: string; reason: string; text: string; handled: boolean }>({
@@ -48,9 +48,10 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
     return points
       .filter((p) => p.status === "pending" && !p.deleted_at)
       .sort((a, b) => {
-        const az = 0;
-        const bz = 0;
-        return az - bz;
+        const ar = a.expand?.created_by?.role === "zaufany" ? 0 : 1;
+        const br = b.expand?.created_by?.role === "zaufany" ? 0 : 1;
+        if (ar !== br) return ar - br;
+        return String(b.created || "").localeCompare(String(a.created || ""));
       });
   }, [points]);
 
@@ -183,7 +184,7 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
               >
                 {["citizen", "zaufany", "operator", "admin"].map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {t("role." + r)}
                   </option>
                 ))}
               </select>

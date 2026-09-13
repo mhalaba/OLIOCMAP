@@ -89,6 +89,8 @@ export interface Point {
   assigned_to?: string;
   resolved_at?: string;
   source_node?: string;
+  created?: string;
+  expand?: { created_by?: { role?: string; name?: string } };
   conflict?: boolean;
   deleted_at?: string;
   hlc?: string;

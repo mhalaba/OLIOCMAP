@@ -1,12 +1,14 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-function flexibleId(collection) {
-  var id = collection.fields.getByName("id");
+function patchRecordId(app, name) {
+  var c = app.findCollectionByNameOrId(name);
+  var id = c.fields.getByName("id");
   if (!id) return;
-  id.min = 3;
+  id.min = 15;
   id.max = 40;
   id.pattern = "^[a-z0-9-]+$";
   id.autogeneratePattern = "[a-z0-9]{15}";
+  app.save(c);
 }
 
 function envelopeFields() {
@@ -30,9 +32,9 @@ migrate((app) => {
     name: "points",
     type: "base",
     listRule:
-      "(status = 'verified' && blocked = false && category != 'potrzeba' && deleted_at = '') || (created_by = @request.auth.id) || (@request.auth.role = 'operator' || @request.auth.role = 'admin')",
+      "(status = 'verified' && blocked = false && category != 'potrzeba' && (deleted_at = '' || deleted_at = null)) || (created_by = @request.auth.id) || (@request.auth.role = 'operator' || @request.auth.role = 'admin')",
     viewRule:
-      "(status = 'verified' && blocked = false && category != 'potrzeba' && deleted_at = '') || (created_by = @request.auth.id) || (@request.auth.role = 'operator' || @request.auth.role = 'admin')",
+      "(status = 'verified' && blocked = false && category != 'potrzeba' && (deleted_at = '' || deleted_at = null)) || (created_by = @request.auth.id) || (@request.auth.role = 'operator' || @request.auth.role = 'admin')",
     createRule: "@request.auth.id != ''",
     updateRule:
       "@request.auth.role = 'operator' || @request.auth.role = 'admin' || (created_by = @request.auth.id && status = 'pending')",
@@ -145,8 +147,8 @@ migrate((app) => {
     ],
   });
 
-  flexibleId(points);
   app.save(points);
+  patchRecordId(app, "points");
 }, (app) => {
   try {
     app.delete(app.findCollectionByNameOrId("points"));

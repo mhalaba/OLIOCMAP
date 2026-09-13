@@ -31,7 +31,11 @@ services:
         condition: service_healthy
       pocketbase:
         condition: service_healthy
+      sync-worker:
+        condition: service_healthy
       central-pocketbase:
+        condition: service_healthy
+      central-caddy:
         condition: service_healthy
     environment:
       BASE_URL: http://127.0.0.1
@@ -42,9 +46,3 @@ services:
       COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-workspace}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      BASE_URL: http://127.0.0.1
-      CENTRAL_URL: http://central-caddy
-      PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:-admin@node.local}
-      PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:-change-me}
-      NODE_ID: ${NODE_ID:-bytom-01}

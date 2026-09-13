@@ -25,10 +25,10 @@ migrate((app) => {
 
   var statusCol = app.findCollectionByNameOrId("node_status");
   try {
-    app.findRecordById("node_status", "self");
+    app.findRecordById("node_status", "self00000000000");
   } catch (e) {
     var rec = new Record(statusCol);
-    rec.id = "self";
+    rec.id = "self00000000000";
     rec.set("node_id", env("NODE_ID", "bytom-01"));
     rec.set("mode", "wyspa");
     rec.set("counts", {});
@@ -38,10 +38,10 @@ migrate((app) => {
 
   var hlcCol = app.findCollectionByNameOrId("hlc_state");
   try {
-    app.findRecordById("hlc_state", "self");
+    app.findRecordById("hlc_state", "self00000000000");
   } catch (e2) {
     var h = new Record(hlcCol);
-    h.id = "self";
+    h.id = "self00000000000";
     h.set("last_ms", 0);
     h.set("counter", 0);
     app.save(h);

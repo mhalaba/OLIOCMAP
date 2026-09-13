@@ -1,12 +1,14 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-function flexibleId(collection) {
-  var id = collection.fields.getByName("id");
+function patchRecordId(app, name) {
+  var c = app.findCollectionByNameOrId(name);
+  var id = c.fields.getByName("id");
   if (!id) return;
-  id.min = 3;
+  id.min = 15;
   id.max = 40;
   id.pattern = "^[a-z0-9-]+$";
   id.autogeneratePattern = "[a-z0-9]{15}";
+  app.save(c);
 }
 
 function adminOperatorRule() {
@@ -37,8 +39,8 @@ migrate((app) => {
     ],
     indexes: ["CREATE UNIQUE INDEX idx_peers_node ON peers (node_id)"],
   });
-  flexibleId(peers);
   app.save(peers);
+  patchRecordId(app, "peers");
 
   var syncLog = new Collection({
     name: "sync_log",
@@ -57,8 +59,8 @@ migrate((app) => {
       { name: "at", type: "date" },
     ],
   });
-  flexibleId(syncLog);
   app.save(syncLog);
+  patchRecordId(app, "sync_log");
 
   var nodeStatus = new Collection({
     name: "node_status",
@@ -79,8 +81,8 @@ migrate((app) => {
       { name: "public_key", type: "text", max: 400 },
     ],
   });
-  flexibleId(nodeStatus);
   app.save(nodeStatus);
+  patchRecordId(app, "node_status");
 
   var audit = new Collection({
     name: "audit",
@@ -110,8 +112,8 @@ migrate((app) => {
       { name: "at", type: "date" },
     ],
   });
-  flexibleId(audit);
   app.save(audit);
+  patchRecordId(app, "audit");
 
   var reports = new Collection({
     name: "reports",
@@ -141,8 +143,8 @@ migrate((app) => {
       { name: "handled", type: "bool" },
     ],
   });
-  flexibleId(reports);
   app.save(reports);
+  patchRecordId(app, "reports");
 
   var invites = new Collection({
     name: "invites",
@@ -166,8 +168,8 @@ migrate((app) => {
     ],
     indexes: ["CREATE UNIQUE INDEX idx_invites_code ON invites (code)"],
   });
-  flexibleId(invites);
   app.save(invites);
+  patchRecordId(app, "invites");
 
   var hlc = new Collection({
     name: "hlc_state",
@@ -182,8 +184,8 @@ migrate((app) => {
       { name: "counter", type: "number", onlyInt: true },
     ],
   });
-  flexibleId(hlc);
   app.save(hlc);
+  patchRecordId(app, "hlc_state");
 }, (app) => {
   ["peers", "sync_log", "node_status", "audit", "reports", "invites", "hlc_state"].forEach(function (n) {
     try { app.delete(app.findCollectionByNameOrId(n)); } catch (e) {}
