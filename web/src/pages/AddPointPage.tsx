@@ -5,7 +5,7 @@ import { t } from "../i18n";
 import { uuidv7 } from "../lib/format";
 import { currentUser, fetchConfig, pb } from "../lib/pb";
 import { queueAdd } from "../lib/queue";
-import { DEFAULT_CATEGORY_ON, PUBLIC_CATEGORIES, type Category, type HostType, type Service } from "../types";
+import { CATEGORY_COLORS, DEFAULT_CATEGORY_ON, PUBLIC_CATEGORIES, type Category, type HostType, type Service } from "../types";
 
 const SERVICES: Service[] = [
   "ladowanie",
@@ -142,6 +142,12 @@ export function AddPointPage() {
               key={c}
               type="button"
               className={`cat-pick ${category === c ? "on" : ""}`}
+              aria-pressed={category === c}
+              style={
+                category === c
+                  ? { background: CATEGORY_COLORS[c], color: c === "prad" ? "#1a1714" : "#fff", borderColor: CATEGORY_COLORS[c] }
+                  : { borderColor: CATEGORY_COLORS[c], color: CATEGORY_COLORS[c] }
+              }
               onClick={() => setCategory(c)}
             >
               {t("cat." + c)}
@@ -270,9 +276,10 @@ export function AddPointPage() {
         </label>
         {err ? <p className="note">{err}</p> : null}
         {msg ? <p className="note info">{msg}</p> : null}
-        <button className="btn primary block" type="submit" style={{ minHeight: 52 }}>
+        <button className="btn primary block" type="submit" style={{ minHeight: 52 }} disabled={!consent}>
           {t("form.zapisz")}
         </button>
+        {!consent ? <p className="hint">{t("form.wymaganaZgoda")}</p> : null}
       </form>
     </div>
   );

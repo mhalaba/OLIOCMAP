@@ -76,6 +76,7 @@ export interface Point {
   consent?: boolean;
   civilians_ok?: boolean;
   created_by?: string;
+  reporter_role?: Role;
   verified_by_node?: string;
   verified_at?: string;
   last_confirmed_at?: string;

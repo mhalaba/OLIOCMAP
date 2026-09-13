@@ -138,6 +138,7 @@ module.exports.create = function(e) {
     rec.set("schema_version", 2);
 
     var role = e.auth ? e.auth.get("role") : "citizen";
+    rec.set("reporter_role", role || "citizen");
     var auto = env.get("AUTO_VERIFY_TRUSTED", "false") === "true" && role === "zaufany";
     rec.set("status", auto ? "verified" : "pending");
     if (auto) {

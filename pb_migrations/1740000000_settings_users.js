@@ -26,7 +26,7 @@ migrate((app) => {
   settings.rateLimits.rules = [
     { label: "users:create", duration: 60, maxRequests: 8, audience: "@guest" },
     { label: "points:create", duration: 60, maxRequests: 20, audience: "@auth" },
-    { label: "/api/", duration: 10, maxRequests: 120, audience: "" },
+    { label: "/api/", duration: 5, maxRequests: 400, audience: "" },
   ];
   app.save(settings);
 

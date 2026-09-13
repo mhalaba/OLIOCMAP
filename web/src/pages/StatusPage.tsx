@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { t } from "../i18n";
 import { currentUser, fetchStatus, isOperator, pb } from "../lib/pb";
-import type { NodeStatus } from "../types";
+import { ALL_CATEGORIES, type NodeStatus } from "../types";
+
+const STATUSES = ["pending", "verified", "rejected", "expired"] as const;
 
 export function StatusPage() {
   const [st, setSt] = useState<NodeStatus | null>(null);
@@ -31,6 +33,9 @@ export function StatusPage() {
     a.click();
   }
 
+  const byCat = st?.counts?.by_category || {};
+  const byStatus = st?.counts?.by_status || {};
+
   return (
     <div className="page">
       <h1>{t("statusPage.wezel")}</h1>
@@ -55,15 +60,32 @@ export function StatusPage() {
       </div>
       <div className="card">
         <h2>{t("statusPage.liczniki")}</h2>
-        <pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(st?.counts || {}, null, 2)}</pre>
-        <p>Potrzeby otwarte: {st?.potrzeba_open ?? 0}</p>
+        <ul className="count-list">
+          {STATUSES.map((s) => (
+            <li key={s}>
+              <span>{t("status." + s)}</span>
+              <strong>{byStatus[s] || 0}</strong>
+            </li>
+          ))}
+        </ul>
+        <ul className="count-list">
+          {ALL_CATEGORIES.filter((c) => (byCat[c] || 0) > 0 || c !== "potrzeba").map((c) => (
+            <li key={c}>
+              <span>{t("cat." + c)}</span>
+              <strong>{byCat[c] || 0}</strong>
+            </li>
+          ))}
+        </ul>
+        <p>
+          {t("statusPage.potrzebyOtwarte")}: <strong>{st?.potrzeba_open ?? 0}</strong>
+        </p>
       </div>
       <div className="card">
         <h2>{t("statusPage.peers")}</h2>
-        {(st?.peers || []).length === 0 ? <p>Brak sąsiadów — tryb wyspa.</p> : null}
+        {(st?.peers || []).length === 0 ? <p>{t("statusPage.brakSasiadow")}</p> : null}
         {(st?.peers || []).map((p) => (
           <p key={p.node_id}>
-            {p.node_id}: {p.ok ? "OK" : "niedostępny"}
+            {p.node_id}: {p.ok ? t("statusPage.dziala") : t("statusPage.niedostepny")}
           </p>
         ))}
       </div>

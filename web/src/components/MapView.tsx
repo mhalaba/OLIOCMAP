@@ -4,7 +4,7 @@ import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { t } from "../i18n";
 import { CATEGORY_COLORS, type Category, type Point, type Service } from "../types";
-import { activationText, freshnessLabel } from "../lib/format";
+import { activationText, freshnessLabel, isPresentDate } from "../lib/format";
 import { asArray } from "../lib/pb";
 
 const OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -23,7 +23,7 @@ type Props = {
 function toFeatures(points: Point[], cats: Record<string, boolean>, services: Service[], intervalDays: number) {
   const feats: GeoJSON.Feature[] = [];
   for (const p of points) {
-    if (p.deleted_at) continue;
+    if (isPresentDate(p.deleted_at)) continue;
     if (p.blocked) continue;
     if (p.status !== "verified" && p.category !== "potrzeba") continue;
     if (!cats[p.category]) continue;

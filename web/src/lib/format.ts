@@ -1,19 +1,29 @@
+/** PocketBase puste daty bywają "", null albo 0001-01-01 — nie traktuj ich jako tombstone. */
+export function isPresentDate(v?: string | null): boolean {
+  if (v === null || v === undefined) return false;
+  const s = String(v).trim();
+  if (!s || s === "[object Object]") return false;
+  if (s.indexOf("0001-01-01") >= 0) return false;
+  const t = Date.parse(s.replace(" ", "T"));
+  return !Number.isNaN(t) && t > 0;
+}
+
 export function daysAgo(iso?: string): number | null {
-  if (!iso) return null;
+  if (!isPresentDate(iso)) return null;
   const t = Date.parse(String(iso).replace(" ", "T"));
   if (Number.isNaN(t)) return null;
   return Math.floor((Date.now() - t) / 86400000);
 }
 
 export function minutesAgo(iso?: string): number | null {
-  if (!iso) return null;
+  if (!isPresentDate(iso)) return null;
   const t = Date.parse(String(iso).replace(" ", "T"));
   if (Number.isNaN(t)) return null;
   return Math.max(0, Math.floor((Date.now() - t) / 60000));
 }
 
 export function formatSyncAgo(iso?: string): string {
-  if (!iso) return "nigdy";
+  if (!isPresentDate(iso)) return "nigdy";
   const m = minutesAgo(iso);
   if (m === null) return "nigdy";
   if (m < 1) return "przed chwilą";

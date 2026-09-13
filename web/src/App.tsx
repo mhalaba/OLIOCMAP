@@ -29,6 +29,13 @@ export default function App() {
       fetchStatus()
         .then(setStatus)
         .catch(() => setStatus((s) => s || ({ mode: "wyspa" } as NodeStatus)));
+      const u = currentUser();
+      if (u && (u.role === "operator" || u.role === "admin")) {
+        pb.collection("points")
+          .getList(1, 1, { filter: 'status = "pending" && category != "potrzeba"' })
+          .then((r) => setPending(r.totalItems))
+          .catch(() => {});
+      }
     };
     pull();
     fetchConfig()

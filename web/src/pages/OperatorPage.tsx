@@ -2,16 +2,35 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { t } from "../i18n";
 import { currentUser, isOperator, pb } from "../lib/pb";
-import { freshnessLabel } from "../lib/format";
+import { freshnessLabel, isPresentDate } from "../lib/format";
 import type { Point } from "../types";
 
 type Tab = "kolejka" | "potwierdzenia" | "potrzeby" | "bledy" | "uzytkownicy";
+
+async function loadPoints(): Promise<Point[]> {
+  let lastErr: unknown;
+  for (let i = 0; i < 4; i++) {
+    try {
+      return await pb.collection("points").getFullList<Point>({ sort: "-updated_at" });
+    } catch (err) {
+      lastErr = err;
+      const status = (err as { status?: number })?.status;
+      if (status === 429 && i < 3) {
+        await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+        continue;
+      }
+      break;
+    }
+  }
+  throw lastErr;
+}
 
 export function OperatorPage({ intervalDays }: { intervalDays: number }) {
   const nav = useNavigate();
   const user = currentUser();
   const [tab, setTab] = useState<Tab>("kolejka");
   const [points, setPoints] = useState<Point[]>([]);
+  const [loadErr, setLoadErr] = useState("");
   const [reports, setReports] = useState<{ id: string; point_id: string; reason: string; text: string; handled: boolean }[]>([]);
   const [users, setUsers] = useState<{ id: string; email: string; name: string; role: string }[]>([]);
 
@@ -24,8 +43,14 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
   }, [user, nav]);
 
   async function reload() {
-    const all = await pb.collection("points").getFullList<Point>({ sort: "-updated_at", expand: "created_by" });
-    setPoints(all);
+    setLoadErr("");
+    try {
+      const all = await loadPoints();
+      setPoints(all);
+    } catch {
+      setLoadErr(t("err.siec"));
+      return;
+    }
     try {
       const r = await pb.collection("reports").getFullList<{ id: string; point_id: string; reason: string; text: string; handled: boolean }>({
         filter: "handled = false",
@@ -46,20 +71,32 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
 
   const pending = useMemo(() => {
     return points
-      .filter((p) => p.status === "pending" && !p.deleted_at && p.category !== "potrzeba")
+      .filter((p) => p.status === "pending" && !isPresentDate(p.deleted_at) && p.category !== "potrzeba")
       .sort((a, b) => {
-        const ar = a.expand?.created_by?.role === "zaufany" ? 0 : 1;
-        const br = b.expand?.created_by?.role === "zaufany" ? 0 : 1;
+        const ar = a.reporter_role === "zaufany" || a.expand?.created_by?.role === "zaufany" ? 0 : 1;
+        const br = b.reporter_role === "zaufany" || b.expand?.created_by?.role === "zaufany" ? 0 : 1;
         if (ar !== br) return ar - br;
-        return String(b.created || "").localeCompare(String(a.created || ""));
+        return String(b.updated_at || "").localeCompare(String(a.updated_at || ""));
       });
   }, [points]);
 
   const overdue = useMemo(() => {
-    return points.filter((p) => p.status === "verified" && !p.blocked && freshnessLabel(p.last_confirmed_at, p.confirm_interval_days || intervalDays).stale);
+    return points.filter(
+      (p) =>
+        p.status === "verified" &&
+        !p.blocked &&
+        !isPresentDate(p.deleted_at) &&
+        freshnessLabel(p.last_confirmed_at, p.confirm_interval_days || intervalDays).stale
+    );
   }, [points, intervalDays]);
 
-  const needs = useMemo(() => points.filter((p) => p.category === "potrzeba" && p.status !== "expired" && !p.resolved_at), [points]);
+  const needs = useMemo(
+    () =>
+      points.filter(
+        (p) => p.category === "potrzeba" && p.status !== "expired" && !isPresentDate(p.resolved_at) && !isPresentDate(p.deleted_at)
+      ),
+    [points]
+  );
 
   async function verify(id: string) {
     await pb.collection("points").update(id, { status: "verified" });
@@ -81,12 +118,29 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
   return (
     <div className="page">
       <h1>{t("nav.operator")}</h1>
-      <div className="tabs">
-        {(["kolejka", "potwierdzenia", "potrzeby", "bledy"] as Tab[]).map((k) => (
-          <button key={k} type="button" className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
-            {t("op." + k)}
+      <p className="page-links">
+        <Link to="/status">{t("nav.status")}</Link>
+        {" · "}
+        <Link to="/prywatnosc">{t("nav.prywatnosc")}</Link>
+      </p>
+      {loadErr ? (
+        <p className="note">
+          {loadErr}{" "}
+          <button type="button" className="btn" onClick={() => reload()}>
+            {t("form.odswiez")}
           </button>
-        ))}
+        </p>
+      ) : null}
+      <div className="tabs">
+        {(["kolejka", "potwierdzenia", "potrzeby", "bledy"] as Tab[]).map((k) => {
+          const n = k === "kolejka" ? pending.length : k === "potwierdzenia" ? overdue.length : k === "potrzeby" ? needs.length : reports.length;
+          return (
+            <button key={k} type="button" className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+              {t("op." + k)}
+              {n ? <span className="tab-count">{n}</span> : null}
+            </button>
+          );
+        })}
         {user?.role === "admin" ? (
           <button type="button" className={tab === "uzytkownicy" ? "on" : ""} onClick={() => setTab("uzytkownicy")}>
             {t("op.uzytkownicy")}
@@ -105,6 +159,7 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
               <p>
                 {t("cat." + p.category)} · {p.address || `${p.lat}, ${p.lon}`}
               </p>
+              {p.reporter_role === "zaufany" ? <p className="fresh">{t("op.zaufany")}</p> : null}
               {p.conflict ? <p className="stale">{t("status.conflict")}</p> : null}
               <div className="queue-actions">
                 <button type="button" className="btn ok" onClick={() => verify(p.id)}>
@@ -117,55 +172,77 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
             </article>
           ))
         ) : (
-          <p>{t("op.pustaKolejka")}</p>
+          <p>
+            {t("op.pustaKolejka")}
+            {needs.length ? (
+              <>
+                {" "}
+                <button type="button" className="linkish" onClick={() => setTab("potrzeby")}>
+                  {t("op.saPotrzeby", { n: needs.length })}
+                </button>
+              </>
+            ) : null}
+          </p>
         ))}
 
       {tab === "potwierdzenia" &&
-        overdue.map((p) => (
-          <article key={p.id} className="card">
-            <h2>{p.title}</h2>
-            <p className="stale">{freshnessLabel(p.last_confirmed_at, p.confirm_interval_days || intervalDays).text}</p>
-            <button type="button" className="btn primary block" onClick={() => confirm(p.id)}>
-              {t("op.potwierdz")}
-            </button>
-          </article>
+        (overdue.length ? (
+          overdue.map((p) => (
+            <article key={p.id} className="card">
+              <h2>{p.title}</h2>
+              <p className="stale">{freshnessLabel(p.last_confirmed_at, p.confirm_interval_days || intervalDays).text}</p>
+              <button type="button" className="btn primary block" onClick={() => confirm(p.id)}>
+                {t("op.potwierdz")}
+              </button>
+            </article>
+          ))
+        ) : (
+          <p>{t("op.pustePotwierdzenia")}</p>
         ))}
 
       {tab === "potrzeby" &&
-        needs.map((p) => (
-          <article key={p.id} className="card">
-            <h2>{p.title}</h2>
-            <p>
-              {t("need." + (p.need_type || "inne"))} · {p.people || 0} os. · {t("need." + (p.urgency || "srednia"))}
-            </p>
-            <p>{p.description}</p>
-            <p>
-              {p.lat}, {p.lon}
-            </p>
-            <button type="button" className="btn" onClick={() => resolveNeed(p.id)}>
-              {t("op.zamknijPotrzebe")}
-            </button>
-          </article>
+        (needs.length ? (
+          needs.map((p) => (
+            <article key={p.id} className="card">
+              <h2>{p.title}</h2>
+              <p>
+                {t("need." + (p.need_type || "inne"))} · {p.people || 0} os. · {t("need." + (p.urgency || "srednia"))}
+              </p>
+              <p>{p.description}</p>
+              <p>
+                {p.lat}, {p.lon}
+              </p>
+              <button type="button" className="btn" onClick={() => resolveNeed(p.id)}>
+                {t("op.zamknijPotrzebe")}
+              </button>
+            </article>
+          ))
+        ) : (
+          <p>{t("op.pustePotrzeby")}</p>
         ))}
 
       {tab === "bledy" &&
-        reports.map((r) => (
-          <article key={r.id} className="card">
-            <p>
-              {r.point_id}: {t("report." + r.reason)}
-            </p>
-            <p>{r.text}</p>
-            <button
-              type="button"
-              className="btn"
-              onClick={async () => {
-                await pb.collection("reports").update(r.id, { handled: true });
-                await reload();
-              }}
-            >
-              {t("form.zapisz")}
-            </button>
-          </article>
+        (reports.length ? (
+          reports.map((r) => (
+            <article key={r.id} className="card">
+              <p>
+                {r.point_id}: {t("report." + r.reason)}
+              </p>
+              <p>{r.text}</p>
+              <button
+                type="button"
+                className="btn"
+                onClick={async () => {
+                  await pb.collection("reports").update(r.id, { handled: true });
+                  await reload();
+                }}
+              >
+                {t("form.zapisz")}
+              </button>
+            </article>
+          ))
+        ) : (
+          <p>{t("op.pusteBledy")}</p>
         ))}
 
       {tab === "uzytkownicy" &&
