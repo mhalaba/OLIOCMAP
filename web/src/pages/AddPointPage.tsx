@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { MapView } from "../components/MapView";
 import { t } from "../i18n";
 import { uuidv7 } from "../lib/format";
-import { currentUser, fetchConfig, isOfflineError, isOperator, pb, pbErrorMessage } from "../lib/pb";
+import { currentUser, fetchConfig, isOfflineError, pb, pbErrorMessage } from "../lib/pb";
 import { queueAdd } from "../lib/queue";
 import {
   CAPABILITY_OPTIONS,
@@ -26,7 +26,6 @@ function toggleIn<T>(arr: T[], v: T): T[] {
 export function AddPointPage() {
   const nav = useNavigate();
   const user = currentUser();
-  const staff = isOperator(user);
   const [gmina, setGmina] = useState("Bytom");
   const [lat, setLat] = useState(50.348);
   const [lon, setLon] = useState(18.923);
@@ -145,6 +144,7 @@ export function AddPointPage() {
       />
       <div className="crosshair" />
       <form onSubmit={onSubmit} className="card add-sheet">
+        <div className="add-sheet-body">
         <p className="sheet-title">{t("form.punktNaMapie")}</p>
         <p className="hint" style={{ marginTop: 0 }}>
           {autoTitle} · {lat.toFixed(4)}, {lon.toFixed(4)}
@@ -326,8 +326,9 @@ export function AddPointPage() {
             ) : null}
           </>
         ) : null}
-
-        <label className="check" style={{ margin: "12px 0" }}>
+        </div>
+        <div className="add-sheet-foot">
+        <label className="check" style={{ margin: "0 0 10px" }}>
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
           <span>
             {t("form.zgodaKrotka")}{" "}
@@ -339,7 +340,7 @@ export function AddPointPage() {
         <button className="btn primary block" type="submit" style={{ minHeight: 52 }} disabled={saving}>
           {t("form.zapisz")}
         </button>
-        <p className="hint">{staff ? t("form.hintOperator") : t("form.hintObywatel")}</p>
+        </div>
       </form>
     </div>
   );
