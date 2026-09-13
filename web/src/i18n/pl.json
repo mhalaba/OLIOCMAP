@@ -1,0 +1,218 @@
+{
+  "app": "Mapa Kryzysowa",
+  "punktOdpornosciNote": "Punkt Odporności to nazwa produktu, nie termin ustawowy.",
+  "nav": {
+    "mapa": "Mapa",
+    "zglos": "Zgłoś punkt",
+    "moje": "Moje",
+    "operator": "Kolejka",
+    "status": "Węzeł",
+    "zaloguj": "Zaloguj",
+    "wyloguj": "Wyloguj",
+    "prywatnosc": "Prywatność",
+    "wydruk": "Wydruk A4"
+  },
+  "banner": {
+    "wyspa": "TRYB WYSPA — centrala niedostępna",
+    "sync": "Połączono z siecią węzłów",
+    "ostatnia": "Ostatnia synchronizacja",
+    "nigdy": "nigdy",
+    "offlineHttps": "Tryb offline wymaga HTTPS — patrz instrukcja."
+  },
+  "map": {
+    "szukaj": "Szukaj punktu",
+    "legenda": "Legenda",
+    "filtry": "Filtry",
+    "mojaPozycja": "Moja pozycja",
+    "brakKafelkow": "Brak kafelków offline — wgraj plik PMTiles do katalogu ./tiles",
+    "brakKafelkowKrotko": "Brak kafelków offline",
+    "nawiguj": "Nawiguj",
+    "zglosBlad": "Zgłoś błąd",
+    "zamknij": "Zamknij",
+    "atrybucja": "© OpenStreetMap"
+  },
+  "freshness": {
+    "potwierdzony": "Potwierdzony {n} {unit} temu",
+    "niepotwierdzony": "Niepotwierdzony od {n} {unit}",
+    "brak": "Brak potwierdzenia"
+  },
+  "time": {
+    "min": "min",
+    "godz": "godz.",
+    "dni": "dni",
+    "dzien": "dzień",
+    "temu": "temu"
+  },
+  "cat": {
+    "odpornosc": "Punkt Odporności",
+    "schron": "Schron / MDS",
+    "aed": "AED",
+    "woda": "Punkt wody",
+    "prad": "Ładowanie / prąd",
+    "lacznosc": "Łączność",
+    "przemysl": "Zdolności lokalne",
+    "potrzeba": "Zgłoszenie potrzeby"
+  },
+  "svc": {
+    "ladowanie": "Ładowanie",
+    "ogrzewanie": "Ogrzewanie",
+    "woda": "Woda",
+    "internet": "Internet",
+    "posilek": "Posiłek",
+    "nocleg": "Nocleg",
+    "pierwsza_pomoc": "Pierwsza pomoc",
+    "toaleta": "Toaleta",
+    "informacja": "Informacja",
+    "zwierzeta": "Zwierzęta"
+  },
+  "host": {
+    "osp": "OSP",
+    "gmina": "Gmina",
+    "szkola": "Szkoła",
+    "parafia": "Parafia",
+    "firma": "Firma",
+    "prywatny": "Prywatny",
+    "inny": "Inny"
+  },
+  "activation": {
+    "stale": "Działa stale",
+    "po_alarmie": "Uruchamiany po alarmie",
+    "po_godzinach_bez_pradu": "Uruchamiany po godzinach bez prądu"
+  },
+  "status": {
+    "pending": "Oczekuje",
+    "verified": "Zweryfikowany",
+    "rejected": "Odrzucony",
+    "expired": "Wygasły",
+    "blocked": "Zablokowany przez centralę",
+    "conflict": "Konflikt"
+  },
+  "auth": {
+    "zaloguj": "Zaloguj",
+    "zarejestruj": "Zarejestruj",
+    "haslo": "Hasło",
+    "email": "Adres e-mail (lokalny, nie musi istnieć w internecie)",
+    "imie": "Imię albo oznaczenie",
+    "kod": "Kod zaproszenia",
+    "zamknieta": "Rejestracja zamknięta — zgłoś się do OSP",
+    "konto": "Nie masz konta?",
+    "masz": "Masz już konto?",
+    "bladLogowania": "Nie udało się zalogować. Sprawdź dane.",
+    "bladRejestracji": "Nie udało się założyć konta."
+  },
+  "form": {
+    "zapisz": "Zapisz",
+    "anuluj": "Anuluj",
+    "dalej": "Dalej",
+    "wstecz": "Wstecz",
+    "tytul": "Nazwa",
+    "opis": "Opis",
+    "adres": "Adres (tekst, bez geokodera)",
+    "lat": "Szerokość (lat)",
+    "lon": "Długość (lon)",
+    "kategoria": "Kategoria",
+    "uslugi": "Usługi",
+    "gospodarz": "Kto prowadzi",
+    "aktywacja": "Kiedy się otwiera",
+    "godzinyBezPradu": "Po ilu godzinach bez prądu",
+    "autonomia": "Autonomia (godz. bez sieci)",
+    "pojemnosc": "Ile osób",
+    "godziny": "Godziny (opisowo)",
+    "kontakt": "Kontakt publiczny (bez PESEL)",
+    "kontaktOp": "Kontakt tylko dla operatora",
+    "zgoda": "Wyrażam zgodę na przetwarzanie podanych danych przez administratora tego węzła w celu prowadzenia mapy pomocy ludności. Zgłoszenia potrzeb są widoczne wyłącznie dla operatorów i usuwane po terminie retencji.",
+    "wymaganaZgoda": "Zaznacz zgodę, żeby zapisać.",
+    "lacznoscOstrzezenie": "Nie podawaj dokładnej lokalizacji anteny. Publicznie pokażemy tylko gminę.",
+    "potrzebaOstrzezenie": "To zgłoszenie widzą tylko operatorzy.",
+    "schronHint": "Schron / MDS: dane z inwentaryzacji PSP. Nie zrzucamy schrony.straz.gov.pl — wklej z CSV/GeoJSON.",
+    "dotknijMapy": "Dotknij mapy albo wpisz współrzędne",
+    "wiecej": "Więcej szczegółów",
+    "mniej": "Mniej",
+    "wyslijTeraz": "Wyślij teraz",
+    "zapisanoTelefon": "Zapisano na telefonie — wyślemy po połączeniu z węzłem",
+    "wycofaj": "Wycofaj",
+    "edytuj": "Edytuj",
+    "linkType": "Rodzaj łączności (publiczny jest tylko typ)",
+    "capability": "Zdolności",
+    "needType": "Czego potrzeba",
+    "people": "Ile osób",
+    "urgency": "Pilność"
+  },
+  "need": {
+    "woda": "Woda",
+    "zywnosc": "Żywność",
+    "leki": "Leki",
+    "prad": "Prąd",
+    "ewakuacja": "Ewakuacja",
+    "opieka": "Opieka",
+    "inne": "Inne",
+    "niska": "Niska",
+    "srednia": "Średnia",
+    "wysoka": "Wysoka"
+  },
+  "op": {
+    "kolejka": "Do weryfikacji",
+    "potwierdzenia": "Potwierdzenia",
+    "potrzeby": "Potrzeby",
+    "bledy": "Zgłoszenia błędów",
+    "uzytkownicy": "Konta",
+    "wezly": "Węzły",
+    "weryfikuj": "Weryfikuj",
+    "odrzuc": "Odrzuć",
+    "potwierdz": "Potwierdź działanie",
+    "przypisz": "Przypisz do mnie",
+    "zamknijPotrzebe": "Oznacz jako załatwione",
+    "zaufany": "Zaufany zgłaszający",
+    "pustaKolejka": "Kolejka pusta — nic do weryfikacji.",
+    "zaufaj": "Zaufaj",
+    "cofnijZaufanie": "Cofnij zaufanie",
+    "klucz": "Klucz publiczny",
+    "paczka": "Pobierz paczkę (USB)",
+    "wczytaj": "Wczytaj paczkę",
+    "invites": "Zaproszenia",
+    "nowyKod": "Nowy kod"
+  },
+  "report": {
+    "powod": "Powód",
+    "nie_istnieje": "Nie istnieje",
+    "zamkniete": "Zamknięte",
+    "zly_adres": "Zły adres",
+    "inne": "Inne",
+    "tekst": "Opis (opcjonalnie)",
+    "wyslij": "Wyślij zgłoszenie",
+    "dzieki": "Dziękujemy. Operator zobaczy zgłoszenie."
+  },
+  "statusPage": {
+    "wezel": "Węzeł",
+    "tryb": "Tryb",
+    "wersja": "Wersja",
+    "liczniki": "Liczniki",
+    "peers": "Sąsiedzi",
+    "pamiec": "Pamięć przeglądarki",
+    "kluczPub": "Klucz publiczny tego węzła"
+  },
+  "privacy": {
+    "tytul": "Polityka prywatności",
+    "admin": "Administratorem danych jest",
+    "cel": "Dane są przetwarzane wyłącznie w celu prowadzenia lokalnej mapy pomocy ludności i ochrony cywilnej na terenie gminy.",
+    "retencja": "Zgłoszenia potrzeb: 72 godziny, potem status wygasły; po kolejnych 7 dniach pola osobowe są usuwane. Konta użytkowników są lokalne dla węzła.",
+    "prawa": "Masz prawo do wglądu, sprostowania i żądania usunięcia danych u operatora węzła."
+  },
+  "cert": {
+    "tytul": "Instalacja certyfikatu",
+    "android": "Android: otwórz /ca.crt, zainstaluj certyfikat CA, włącz zaufanie dla VPN i aplikacji.",
+    "ios": "iOS: otwórz /ca.crt, zainstaluj profil, w Ustawieniach → Ogólne → Informacje → Ustawienia zaufania certyfikatów włącz zaufanie."
+  },
+  "print": {
+    "tytul": "Wykaz punktów — wydruk A4",
+    "data": "Data wydruku"
+  },
+  "empty": {
+    "moje": "Nie masz jeszcze zgłoszeń na tym węźle.",
+    "mapa": "Brak punktów w wybranych filtrach."
+  },
+  "err": {
+    "ogolny": "Nie udało się wykonać operacji.",
+    "siec": "Brak połączenia z węzłem."
+  }
+}

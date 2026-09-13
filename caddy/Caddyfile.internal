@@ -1,0 +1,41 @@
+{
+  admin off
+}
+
+:80 {
+  redir https://{host}{uri} 308
+}
+
+:443 {
+  tls internal
+  encode gzip
+
+  handle /ca.crt {
+    root * /data/caddy/pki/authorities/local
+    rewrite * /root.crt
+    file_server
+    header Content-Type "application/x-x509-ca-cert"
+  }
+
+  handle /api/* {
+    reverse_proxy {$PB_UPSTREAM}
+  }
+
+  handle /_/* {
+    reverse_proxy {$PB_UPSTREAM}
+  }
+
+  handle /sync/v1/* {
+    reverse_proxy {$SYNC_UPSTREAM}
+  }
+
+  handle /tiles/* {
+    reverse_proxy {$PB_UPSTREAM}
+  }
+
+  handle {
+    root * /srv
+    try_files {path} /index.html
+    file_server
+  }
+}

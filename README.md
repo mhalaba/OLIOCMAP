@@ -1,1 +1,129 @@
-# OLIOCMAP
+# Mapa Kryzysowa
+
+Lokalna mapa pomocy ludności dla gminy: Punkty Odporności, schrony / MDS, AED, woda, prąd, łączność i zdolności lokalne. Węzeł stoi zwykle w remizie OSP albo w urzędzie gminy i **działa bez internetu, bez GPS i bez centrali**.
+
+To nie jest system alarmowania (Alert RCB / RSO), nie wyznacza ewakuacji i **nie mapuje infrastruktury krytycznej**. „Punkt Odporności” to nazwa produktu (koncepcja ukraińska), nie termin z ustawy o ochronie ludności.
+
+Dla kogo: wójt / burmistrz / prezydent (organ ochrony ludności), OSP, operatorzy gminy. Mieszkaniec korzysta z mapy na Wi-Fi remizy.
+
+## Jak uruchomić wyspę
+
+```bash
+cp .env.example .env
+# zmień NODE_ID, NODE_NAME, hasła superuserów
+docker compose up --build
+```
+
+Wejdź na `http://<IP-węzła>/` (albo `http://127.0.0.1/` na samym urządzeniu).
+
+Konta demo (**usuń przed produkcją**):
+
+- operator: `operator@demo.local` / `demo12345`
+- mieszkaniec: `mieszkaniec@demo.local` / `demo12345`
+- superuser PocketBase: wartości z `.env` (`PB_SUPERUSER_EMAIL`)
+
+Panel PocketBase: `http://<IP>/_/`. Aplikacja operatora: `/operator`.
+
+## Jak dołączyć centralę
+
+```bash
+docker compose --profile central up --build
+```
+
+Na węźle w `.env`:
+
+```
+CENTRAL_URL=http://central-caddy
+```
+
+albo `PEERS=[{"node_id":"central-01","base_url":"http://central-caddy"}]`.
+
+1. Na węźle otwórz `/status` (operator) i skopiuj klucz publiczny.
+2. Na centrali (`http://<host>:8092/operator/wezly`) wklej klucz, **Zaufaj**.
+3. Analogicznie zaufaj węzłowi na stronie centrali i centrali na węźle (klucz centrali: `GET /sync/v1/health`).
+
+Centrala nie loguje użytkowników innych węzłów. Użytkownicy są zawsze lokalni.
+
+## Jak działa awaria
+
+1. Zatrzymaj centralę albo sieć (`scripts/chaos.sh down-central`).
+2. W ciągu ok. minuty baner: **TRYB WYSPA — centrala niedostępna**.
+3. Logowanie, dodawanie i weryfikacja punktów działają na lokalnym SQLite.
+4. Uruchom centralę (`scripts/chaos.sh up-central`). Sync-worker dopycha zweryfikowane rekordy (z podpisem Ed25519) zwykle w ≤ 60 s.
+5. Bez sieci w ogóle: operator na `/status` pobiera paczkę USB, sąsiad wczytuje ją w `/operator` (porównaj odcisk klucza przez telefon / radio).
+
+## Kafelki
+
+```bash
+scripts/make-tiles.sh
+```
+
+Wgraj `*.pmtiles` do `./tiles` i uzupełnij `tiles/index.json`. Cała Polska przy z14 to kilka GB; powiat przy z15 — dziesiątki MB (zalecane dla OSP). Atrybucja: © OpenStreetMap, Protomaps. Bez pliku mapa pokaże ostrzeżenie i — tylko gdy jest internet — raster OSM.
+
+## HTTPS i tryb offline (PWA)
+
+`TLS_MODE` w `.env`:
+
+- `off` — HTTP. Aplikacja działa, ale service worker się nie zainstaluje (poza localhost).
+- `internal` — certyfikat Caddy. Pobierz `/ca.crt`, instrukcja: `/instalacja-certyfikatu`.
+- `file` — własny certyfikat gminy (`TLS_CERT_FILE`, `TLS_KEY_FILE`), uzyskany **przed** wdrożeniem, nigdy w runtime z internetu.
+
+## Sprzęt węzła
+
+Zobacz [docs/sprzet.md](docs/sprzet.md): Raspberry Pi 5 (8 GB) albo mini-PC, 32 GB, UPS, **moduł RTC DS3231 albo czas z GPS**. Bez RTC po zaniku zasilania zegar wraca do 1970 i psuje synchronizację.
+
+## Kategorie i OPSEC
+
+Nie mapujemy IK (elektrownia, GPZ, gazociąg, magazyn paliw, jednostka wojskowa, …) — hook odrzuca zgłoszenie bez wyjątku dla admina. Łączność / prywatny prąd: publicznie gmina, nie antena. Zdjęcia: bez GPS EXIF; zakaz zdjęć dla `lacznosc`. `potrzeba` nigdy publiczna (TTL 72 h + 7 dni czyszczenia).
+
+Punkt „gotowy na papierze” dostaje pola `activation`, `autonomy_h`, `last_confirmed_at`. UI pokazuje **Niepotwierdzony od N dni**. Operator: **Potwierdź działanie**.
+
+Szczegóły: [docs/opsec.md](docs/opsec.md).
+
+## RODO
+
+Administrator danych: `NODE_OPERATOR_NAME` (strona `/prywatnosc`). Minimalizacja, zgoda przy zgłoszeniu, potrzeby niewidoczne publicznie, retencja 72 h + 7 dni. Konta nie są synchronizowane między węzłami.
+
+## Role i weryfikacja
+
+- mieszkaniec — zgłasza, widzi swoje pending
+- zaufany — personel OSP/gminy (kolejka wyżej; opcjonalnie `AUTO_VERIFY_TRUSTED`)
+- operator — weryfikuje, potwierdza, potrzeby
+- admin — role i zaufanie węzłów
+
+Checklista operatora: czy punkt istnieje, kto prowadzi, kiedy działa, kontakt do gospodarza, autonomia, czy nie ujawnia IK.
+
+## Kopie zapasowe
+
+`scripts/backup.sh` — API kopii PocketBase do `./backups`, 7 dni. Odtwarzanie: wgraj archiwum przez API `/api/backups` albo podmień wolumen `pb_data` przy zatrzymanym kontenerze.
+
+## Testy
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from test-runner
+```
+
+Scenariusze (także ręcznie):
+
+1. Rejestracja → AED → `/moje` status Oczekuje
+2. Operator Weryfikuj → punkt na mapie bez logowania
+3. Odłącz centralę → baner TRYB WYSPA → dodaj i zweryfikuj lokalnie
+4. Podłącz centralę → w ≤ 60 s rekord z `sig` na centrali
+5. Offline po jednej wizycie: powłoka, kolejka `/dodaj`
+6. `lacznosc`: publicznie zaokrąglone współrzędne, operator — dokładne
+7. `potrzeba` nie w `/api/feed.geojson`; wygasa po TTL
+8. Push z nieznanego węzła → 403 i peer `trusted=false`; po Zaufaj — OK
+9. Zbudowany frontend bez angielskich etykiet (Login, Submit, Save, …)
+
+## Znane ograniczenia
+
+- P2 (nie zbudowane): portalcaptive Wi-Fi `MAPA-KRYZYSOWA`, mDNS `mapa.local`, wklejka Alert RCB, discovery LAN, bramka SMS.
+- Re-encode EXIF (P1 pełny): P0 odrzuca JPEG z GPS.
+- Locale `uk` — P1.
+- „Otwarte teraz” z OSM `opening_hours` — P1.
+- Przypisanie gminy z `gminy.geojson` — P1.
+- Service worker wymaga HTTPS albo localhost.
+- Brak kafelków PMTiles = pusta podkładka offline (punkty i tak się rysują).
+- Zegary bez RTC psują HLC — czytaj docs/sprzet.md.
+
+Profil `dev`: `docker compose --profile dev up` (Vite :5173 z proxy).

@@ -1,0 +1,29 @@
+/// <reference path="../pb_data/types.d.ts" />
+
+var env = require(`${__hooks}/lib/env.js`);
+var expire = require(`${__hooks}/lib/expire.js`);
+
+cronAdd("expire", "*/10 * * * *", () => {
+  expire.run($app);
+});
+
+cronAdd("counts", "*/2 * * * *", () => {
+  try {
+    var rec = $app.findRecordById("node_status", "self");
+    var points = $app.findAllRecords("points");
+    var by_category = {};
+    var by_status = {};
+    for (var i = 0; i < points.length; i++) {
+      var r = points[i];
+      var d = r.get("deleted_at");
+      if (d && String(d) !== "") continue;
+      var c = r.get("category") || "inne";
+      var s = r.get("status") || "pending";
+      by_category[c] = (by_category[c] || 0) + 1;
+      by_status[s] = (by_status[s] || 0) + 1;
+    }
+    rec.set("counts", { by_category: by_category, by_status: by_status });
+    rec.set("node_id", env.get("NODE_ID", "bytom-01"));
+    $app.save(rec);
+  } catch (e) {}
+});

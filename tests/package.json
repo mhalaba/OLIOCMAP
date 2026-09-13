@@ -1,0 +1,15 @@
+{
+  "name": "mapa-kryzysowa-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test unit/*.test.mjs && node integration/api.mjs && npx playwright test --config e2e/playwright.config.ts",
+    "unit": "node --test unit/*.test.mjs",
+    "unit": "node --test unit/*.test.mjs",
+    "int": "node integration/api.mjs",
+    "e2e": "playwright test --config e2e/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

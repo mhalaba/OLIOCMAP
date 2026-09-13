@@ -1,0 +1,34 @@
+{
+  admin off
+}
+
+:80 {
+  redir https://{host}{uri} 308
+}
+
+:443 {
+  tls {$TLS_CERT_FILE} {$TLS_KEY_FILE}
+  encode gzip
+
+  handle /api/* {
+    reverse_proxy {$PB_UPSTREAM}
+  }
+
+  handle /_/* {
+    reverse_proxy {$PB_UPSTREAM}
+  }
+
+  handle /sync/v1/* {
+    reverse_proxy {$SYNC_UPSTREAM}
+  }
+
+  handle /tiles/* {
+    reverse_proxy {$PB_UPSTREAM}
+  }
+
+  handle {
+    root * /srv
+    try_files {path} /index.html
+    file_server
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "version": 8,
+  "name": "Mapa Kryzysowa — warstwa bazowa",
+  "sources": {},
+  "layers": [
+    {
+      "id": "bg",
+      "type": "background",
+      "paint": { "background-color": "#e8e4dc" }
+    }
+  ],
+  "glyphs": "/fonts/{fontstack}/{range}.pbf",
+  "sprite": "/sprites/sprite"
+}
