@@ -270,7 +270,7 @@ export function AddPointPage() {
         </label>
         {err ? <p className="note">{err}</p> : null}
         {msg ? <p className="note info">{msg}</p> : null}
-        <button className="btn primary block" type="submit">
+        <button className="btn primary block" type="submit" style={{ minHeight: 52 }}>
           {t("form.zapisz")}
         </button>
       </form>

@@ -25,9 +25,12 @@ export default function App() {
 
   useEffect(() => {
     const unsub = pb.authStore.onChange(() => setUser(currentUser()));
-    fetchStatus()
-      .then(setStatus)
-      .catch(() => setStatus({ mode: "wyspa" } as NodeStatus));
+    const pull = () => {
+      fetchStatus()
+        .then(setStatus)
+        .catch(() => setStatus((s) => s || ({ mode: "wyspa" } as NodeStatus)));
+    };
+    pull();
     fetchConfig()
       .then((c) => {
         setIntervalDays(c.confirm_interval_days || 14);
@@ -35,21 +38,22 @@ export default function App() {
       .catch(() => {});
     const secure = window.isSecureContext;
     setHttpsNote(!secure);
-    const id = setInterval(() => {
-      fetchStatus()
-        .then(setStatus)
-        .catch(() => {});
-    }, 15000);
+    const id = setInterval(pull, 5000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") pull();
+    };
+    document.addEventListener("visibilitychange", onVis);
     return () => {
       unsub();
       clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
 
   useEffect(() => {
     if (!user || (user.role !== "operator" && user.role !== "admin")) return;
     pb.collection("points")
-      .getList(1, 1, { filter: 'status = "pending"' })
+      .getList(1, 1, { filter: 'status = "pending" && category != "potrzeba"' })
       .then((r) => setPending(r.totalItems))
       .catch(() => {});
   }, [user]);

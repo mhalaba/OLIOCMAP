@@ -165,6 +165,18 @@ const run = async () => {
   const peer = peers.data.items[0];
   assert(peer.trusted === false, "trusted false");
 
+  const html = await fetch(`${BASE}/`).then((r) => r.text());
+  const assets = [...html.matchAll(/\/assets\/[^"' ]+\.js/g)].map((m) => m[0]);
+  const osm = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const hostRe = [/googleapis/i, /mapbox/i, /unpkg/i, /jsdelivr/i, /cdn\./i];
+  for (const a of assets.slice(0, 12)) {
+    const js = await fetch(`${BASE}${a}`).then((r) => r.text());
+    const scan = js.split(osm).join("");
+    for (const re of hostRe) {
+      assert(!re.test(scan), `zabroniony host ${re} w ${a}`);
+    }
+  }
+
   console.log("integracja API: OK");
 };
 

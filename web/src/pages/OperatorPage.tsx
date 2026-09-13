@@ -46,7 +46,7 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
 
   const pending = useMemo(() => {
     return points
-      .filter((p) => p.status === "pending" && !p.deleted_at)
+      .filter((p) => p.status === "pending" && !p.deleted_at && p.category !== "potrzeba")
       .sort((a, b) => {
         const ar = a.expand?.created_by?.role === "zaufany" ? 0 : 1;
         const br = b.expand?.created_by?.role === "zaufany" ? 0 : 1;

@@ -263,7 +263,7 @@ a { color: var(--red); }
   box-shadow: var(--shadow);
   font-size: 13px;
 }
-.legend summary { min-height: 36px; font-weight: 800; cursor: pointer; }
+.legend summary { min-height: 44px; display: flex; align-items: center; font-weight: 800; cursor: pointer; }
 .legend li { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
 .legend i {
   width: 12px; height: 12px; border-radius: 50%; display: inline-block;
@@ -275,7 +275,7 @@ a { color: var(--red); }
   align-items: flex-start;
   font-size: 14px;
 }
-.check input { width: 22px; height: 22px; margin-top: 2px; flex: 0 0 auto; }
+.check input { width: 28px; height: 28px; margin-top: 2px; flex: 0 0 auto; }
 
 .cat-grid {
   display: grid;

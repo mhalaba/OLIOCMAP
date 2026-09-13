@@ -1,10 +1,25 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const dir = dirname(fileURLToPath(import.meta.url));
 const chaos = join(dir, "../../scripts/chaos.sh");
+
+async function login(page: Page, email: string, password = "demo12345") {
+  await page.goto("/login");
+  await page.getByLabel(/Adres e-mail/).fill(email);
+  await page.getByLabel(/Hasło/).fill(password);
+  await page.getByRole("button", { name: "Zaloguj" }).click();
+  await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 20000 });
+}
+
+async function addPoint(page: Page, category: string) {
+  await page.goto("/dodaj");
+  await page.getByRole("button", { name: category }).first().click();
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Zapisz" }).click();
+}
 
 test.describe.configure({ mode: "serial" });
 
@@ -15,20 +30,14 @@ test("1. rejestracja i AED w Moje jako Oczekuje", async ({ page }) => {
   await page.getByLabel(/Adres e-mail/).fill(email);
   await page.getByLabel(/Hasło/).fill("demo12345");
   await page.getByRole("button", { name: "Zarejestruj" }).click();
-  await page.waitForURL(/\/$|\/dodaj/);
-  await page.goto("/dodaj");
-  await page.getByRole("button", { name: "AED" }).click();
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Zapisz" }).click();
-  await page.waitForURL(/moje/);
+  await page.waitForURL(/\/$|\/dodaj/, { timeout: 20000 });
+  await addPoint(page, "AED");
+  await page.waitForURL(/moje/, { timeout: 20000 });
   await expect(page.getByText("Oczekuje")).toBeVisible();
 });
 
 test("2. operator weryfikuje — punkt na mapie anonimowo", async ({ page, context }) => {
-  await page.goto("/login");
-  await page.getByLabel(/Adres e-mail/).fill("operator@demo.local");
-  await page.getByLabel(/Hasło/).fill("demo12345");
-  await page.getByRole("button", { name: "Zaloguj" }).click();
+  await login(page, "operator@demo.local");
   await page.goto("/operator");
   const verify = page.getByRole("button", { name: "Weryfikuj" }).first();
   await expect(verify).toBeVisible({ timeout: 30000 });
@@ -47,14 +56,9 @@ test("3. TRYB WYSPA po odłączeniu centrali — dodawanie działa", async ({ pa
   }
   await page.goto("/");
   await expect(page.getByText(/TRYB WYSPA/)).toBeVisible({ timeout: 60000 });
-  await page.goto("/login");
-  await page.getByLabel(/Adres e-mail/).fill("operator@demo.local");
-  await page.getByLabel(/Hasło/).fill("demo12345");
-  await page.getByRole("button", { name: "Zaloguj" }).click();
-  await page.goto("/dodaj");
-  await page.getByRole("button", { name: "Punkt Odporności" }).first().click();
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Zapisz" }).click();
+  await login(page, "operator@demo.local");
+  await addPoint(page, "Punkt Odporności");
+  await page.waitForURL(/moje/, { timeout: 20000 });
   await page.goto("/operator");
   const verify = page.getByRole("button", { name: "Weryfikuj" }).first();
   if (await verify.isVisible()) await verify.click();
@@ -84,10 +88,7 @@ test("4. po podłączeniu centrali punkt z podpisem", async ({ page }) => {
 });
 
 test("5. offline: powłoka i kolejka zapisu", async ({ page, context }) => {
-  await page.goto("/login");
-  await page.getByLabel(/Adres e-mail/).fill("mieszkaniec@demo.local");
-  await page.getByLabel(/Hasło/).fill("demo12345");
-  await page.getByRole("button", { name: "Zaloguj" }).click();
+  await login(page, "mieszkaniec@demo.local");
   await page.goto("/");
   await expect(page.locator(".map-el")).toBeVisible();
   await page.goto("/dodaj");

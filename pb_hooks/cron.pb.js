@@ -1,11 +1,12 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-cronAdd("expire", "*/10 * * * *", () => {
+cronAdd("expire", "* * * * *", () => {
   require(`${__hooks}/lib/expire.js`).run($app);
 });
 
 cronAdd("counts", "*/2 * * * *", () => {
   var env = require(`${__hooks}/lib/env.js`);
+  var expire = require(`${__hooks}/lib/expire.js`);
   try {
     var rec = $app.findRecordById("node_status", env.SELF_ID);
     var points = $app.findAllRecords("points");
@@ -13,8 +14,7 @@ cronAdd("counts", "*/2 * * * *", () => {
     var by_status = {};
     for (var i = 0; i < points.length; i++) {
       var r = points[i];
-      var d = r.get("deleted_at");
-      if (d && String(d) !== "") continue;
+      if (expire.isDeleted(r)) continue;
       var c = r.get("category") || "inne";
       var s = r.get("status") || "pending";
       by_category[c] = (by_category[c] || 0) + 1;

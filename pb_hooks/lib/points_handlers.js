@@ -230,7 +230,10 @@ module.exports.update = function(e) {
     var newStatus = rec.get("status");
     var oldStatus = orig.get("status");
     if (newStatus !== oldStatus) {
-      if (!isOperator(e.auth)) {
+      var ttlExpire = newStatus === "expired" && orig.get("category") === "potrzeba";
+      if (ttlExpire) {
+        /* automatyczne wygaszenie — nie wymaga operatora */
+      } else if (!isOperator(e.auth)) {
         rec.set("status", oldStatus);
       } else if (newStatus === "verified" || newStatus === "rejected") {
         if (newStatus === "verified") {
