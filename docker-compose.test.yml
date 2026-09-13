@@ -1,4 +1,4 @@
-# Użycie: docker compose -f docker-compose.yml -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from test-runner
+# Użycie: docker compose --profile central -f docker-compose.yml -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
 
 services:
   pocketbase:
@@ -15,11 +15,12 @@ services:
       CENTRAL_URL: http://central-caddy
 
   central-pocketbase:
-    profiles: []
+    environment:
+      POTRZEBA_TTL_H: "0.01"
   central-sync:
-    profiles: []
-  central-caddy:
-    profiles: []
+    environment:
+      POTRZEBA_TTL_H: "0.01"
+      SYNC_INTERVAL_S: "5"
 
   test-runner:
     build:
