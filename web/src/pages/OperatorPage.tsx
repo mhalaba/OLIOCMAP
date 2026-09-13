@@ -24,7 +24,7 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
   }, [user, nav]);
 
   async function reload() {
-    const all = await pb.collection("points").getFullList<Point>({ sort: "-created", expand: "created_by" });
+    const all = await pb.collection("points").getFullList<Point>({ sort: "-updated_at", expand: "created_by" });
     setPoints(all);
     try {
       const r = await pb.collection("reports").getFullList<{ id: string; point_id: string; reason: string; text: string; handled: boolean }>({

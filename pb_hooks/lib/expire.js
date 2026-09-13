@@ -67,7 +67,7 @@ module.exports = {
         console.log("expire_fail", r.id, String(err));
       }
     }
-    var logs = app.findRecordsByFilter("sync_log", "", "-created", 5000, 0);
+    var logs = app.findRecordsByFilter("sync_log", "", "-at", 5000, 0);
     if (logs.length > 2000) {
       for (var j = 2000; j < logs.length; j++) {
         try {

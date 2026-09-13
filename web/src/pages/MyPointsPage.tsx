@@ -16,7 +16,7 @@ export function MyPointsPage() {
     if (!user) return;
     const res = await pb.collection("points").getFullList<Point>({
       filter: `created_by = "${user.id}"`,
-      sort: "-created",
+      sort: "-updated_at",
     });
     setItems(res);
     setQueued(await queueAll());
