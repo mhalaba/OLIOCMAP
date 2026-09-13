@@ -4,6 +4,7 @@ import { mkdir, rename, stat, writeFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
+import http from "node:http";
 import { resolvePmtilesSource } from "../shared/pmtiles_source.mjs";
 
 export const TILE_PRESETS = {
@@ -93,6 +94,68 @@ export function createTileManager({ cfg, log = console }) {
     });
   }
 
+  function postUnix(socketPath, urlPath, body, timeoutMs = 25 * 60 * 1000) {
+    return new Promise((resolve, reject) => {
+      const payload = Buffer.from(JSON.stringify(body));
+      const req = http.request(
+        {
+          socketPath,
+          path: urlPath,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": payload.length,
+          },
+        },
+        (res) => {
+          const chunks = [];
+          res.on("data", (c) => chunks.push(c));
+          res.on("end", () => {
+            const text = Buffer.concat(chunks).toString("utf8");
+            let data = null;
+            try {
+              data = text ? JSON.parse(text) : null;
+            } catch {
+              data = { error: text };
+            }
+            resolve({ status: res.statusCode || 0, data });
+          });
+        }
+      );
+      req.setTimeout(timeoutMs, () => {
+        req.destroy();
+        reject(new Error("agent kafelków: timeout"));
+      });
+      req.on("error", reject);
+      req.end(payload);
+    });
+  }
+
+  async function extractTo(tmp, spec) {
+    const sock = cfg.tilesAgentSock || "/tiles/agent.sock";
+    if (sock && existsSync(sock)) {
+      const res = await postUnix(sock, "/extract", {
+        dest: tmp,
+        bbox: spec.bbox,
+        maxzoom: spec.maxzoom,
+        configured: cfg.pmtilesSource,
+      });
+      if (res.status !== 200 || !res.data || res.data.ok !== true) {
+        throw new Error((res.data && res.data.error) || "agent kafelków HTTP " + res.status);
+      }
+      return res.data.source || "";
+    }
+    const source = await resolvePmtilesSource({ configured: cfg.pmtilesSource });
+    await runPmtiles([
+      "extract",
+      source,
+      tmp,
+      `--bbox=${spec.bbox}`,
+      `--maxzoom=${spec.maxzoom}`,
+    ]);
+    return source;
+  }
+
   async function extract(preset) {
     if (job.state === "running") return job;
     const spec = resolvePreset(preset);
@@ -112,16 +175,9 @@ export function createTileManager({ cfg, log = console }) {
     const tmp = dest + ".part";
     try {
       await mkdir(cfg.tilesDir, { recursive: true });
-      const source = await resolvePmtilesSource({ configured: cfg.pmtilesSource });
+      const source = await extractTo(tmp, spec);
       job.source = source;
       log.log?.("[tiles] źródło", source, spec);
-      await runPmtiles([
-        "extract",
-        source,
-        tmp,
-        `--bbox=${spec.bbox}`,
-        `--maxzoom=${spec.maxzoom}`,
-      ]);
       await rename(tmp, dest);
       const s = await stat(dest);
       job.bytes = s.size;

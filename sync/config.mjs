@@ -28,6 +28,7 @@ export const cfg = {
   tilesMaxzoom: env("TILES_MAXZOOM", "14"),
   pmtilesSource: env("PMTILES_SOURCE", "auto"),
   pmtilesBin: env("PMTILES_BIN", "pmtiles"),
+  tilesAgentSock: env("TILES_AGENT_SOCK", "/tiles/agent.sock"),
 };
 
 export function parsePeersEnv() {

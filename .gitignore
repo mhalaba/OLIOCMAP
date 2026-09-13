@@ -13,6 +13,8 @@ tests/test-results/
 tiles/*.pmtiles
 tiles/*.pmtiles-journal
 tiles/*.part
+tiles/agent.sock
+tiles/index.json
 tiles/aed-import.json
 backups/
 *.log

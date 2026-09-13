@@ -54,7 +54,7 @@ Centrala nie loguje użytkowników innych węzłów. Użytkownicy są zawsze lok
 
 ## Kafelki
 
-Na stronie **Węzeł** (`/status`, operator): **Pobierz gminę** / województwo / Polskę. Węzeł wycina PMTiles z **aktualnego** dziennego buildu Protomaps (HTTP range; `PMTILES_SOURCE=auto`) do `./tiles/poland.pmtiles`. Datowane URL-e znikają po ok. tygodniu — nie wklejaj starej daty na sztywno. Potem mapa nie woła internetu.
+Na stronie **Węzeł** (`/status`, operator): **Pobierz gminę** / województwo / Polskę. Węzeł wycina PMTiles z **aktualnego** dziennego buildu Protomaps (HTTP range; `PMTILES_SOURCE=auto`) do `./tiles/poland.pmtiles`. Datowane URL-e znikają po ok. tygodniu — nie wklejaj starej daty na sztywno. Pobieranie idzie przez **tiles-agent** na sieci hosta (kontenery Dockera bywają bez NAT). Potem mapa nie woła internetu.
 
 Albo z USB: **Wgraj plik PMTiles**. Albo na hoście:
 
