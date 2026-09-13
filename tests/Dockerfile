@@ -2,6 +2,10 @@ FROM mcr.microsoft.com/playwright:v1.49.0-jammy
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends docker.io bash ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
+COPY tests/package.json tests/package-lock.json /app/tests/
+WORKDIR /app/tests
+RUN npm ci
+WORKDIR /app
 COPY tests /app/tests
 COPY shared /app/shared
 COPY scripts /app/scripts
@@ -13,6 +17,5 @@ COPY .env.example /app/.env.example
 COPY docker-compose.yml /app/docker-compose.yml
 COPY caddy/entrypoint.sh /app/caddy/entrypoint.sh
 WORKDIR /app/tests
-RUN npm install
 ENV BASE_URL=http://127.0.0.1
 CMD ["npm", "test"]
