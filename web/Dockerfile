@@ -11,6 +11,7 @@ RUN npm run build \
       -e 's/mapbox-gl/mlgl/g' \
       -e 's/Mapbox/Mbx/g' \
       -e 's/mapbox/mbx/g' \
+      -e 's/Ye("Error",Error)/Ye("Blad",Error)/g' \
       {} +
 
 FROM alpine:3.20
