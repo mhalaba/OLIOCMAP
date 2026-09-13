@@ -100,10 +100,15 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
   dataRef.current = toFeatures(points, cats, services, intervalDays);
 
   useEffect(() => {
-    if (!ref.current || mapRef.current) return;
+    if (!ref.current) return;
     let cancelled = false;
     (async () => {
       const protocol = new Protocol();
+      try {
+        maplibregl.removeProtocol("pmtiles");
+      } catch {
+        /* pierwszy raz */
+      }
       maplibregl.addProtocol("pmtiles", protocol.tile);
       let style: maplibregl.StyleSpecification = {
         version: 8,
@@ -163,6 +168,10 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
         zoom: 12,
         attributionControl: { compact: true },
       });
+      if (cancelled) {
+        map.remove();
+        return;
+      }
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
       map.on("load", () => {
         map.addSource("points", {
@@ -219,6 +228,15 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
     })();
     return () => {
       cancelled = true;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      try {
+        maplibregl.removeProtocol("pmtiles");
+      } catch {
+        /* ignore */
+      }
     };
   }, []);
 

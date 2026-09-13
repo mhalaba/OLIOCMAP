@@ -167,6 +167,7 @@ export function StatusPage() {
             <p>{t("tiles.brak")}</p>
           )}
           {tiles?.job?.state === "running" ? <p>{t("tiles.trwa")}</p> : null}
+          {tiles?.job?.state === "ok" && tiles.job.bytes ? <p className="note info">{t("tiles.gotowe")}</p> : null}
           {tiles?.job?.error ? <p className="note">{tiles.job.error}</p> : null}
           <div className="row" style={{ marginTop: 8 }}>
             <button type="button" className="btn primary" disabled={tiles?.job?.state === "running"} onClick={() => startTiles("gmina")}>

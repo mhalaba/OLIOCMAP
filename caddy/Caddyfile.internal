@@ -8,7 +8,8 @@
 
 :443 {
   tls internal
-  encode gzip
+  @notTiles not path /tiles/*
+  encode @notTiles gzip
 
   handle /ca.crt {
     root * /data/caddy/pki/authorities/local

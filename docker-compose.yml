@@ -27,7 +27,7 @@ x-node-env: &node-env
   TILES_DIR: ${TILES_DIR:-/tiles}
   TILES_BBOX: ${TILES_BBOX:-18.82,50.30,18.98,50.42}
   TILES_MAXZOOM: ${TILES_MAXZOOM:-14}
-  PMTILES_SOURCE: ${PMTILES_SOURCE:-https://build.protomaps.com/20260904.pmtiles}
+  PMTILES_SOURCE: ${PMTILES_SOURCE:-auto}
 
 x-central-env: &central-env
   NODE_ID: central-01
@@ -58,7 +58,7 @@ x-central-env: &central-env
   TILES_DIR: /tiles
   TILES_BBOX: ${TILES_BBOX:-18.82,50.30,18.98,50.42}
   TILES_MAXZOOM: ${TILES_MAXZOOM:-14}
-  PMTILES_SOURCE: ${PMTILES_SOURCE:-https://build.protomaps.com/20260904.pmtiles}
+  PMTILES_SOURCE: ${PMTILES_SOURCE:-auto}
 
 services:
   pocketbase:

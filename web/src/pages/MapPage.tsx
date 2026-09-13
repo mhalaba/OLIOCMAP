@@ -15,6 +15,7 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
   const [cats, setCats] = useState<Record<string, boolean>>({ ...DEFAULT_CATEGORY_ON });
   const [services, setServices] = useState<Service[]>([]);
   const [tileWarn, setTileWarn] = useState("");
+  const [tilesKey, setTilesKey] = useState(0);
   const [hits, setHits] = useState<Point[]>([]);
 
   useEffect(() => {
@@ -49,6 +50,30 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!tileWarn) return;
+    let stop = false;
+    const tick = async () => {
+      try {
+        const idx = await fetch("/tiles/index.json").then((r) => (r.ok ? r.json() : null));
+        const files: string[] = idx?.files || [];
+        const head = await fetch("/tiles/poland.pmtiles", { method: "HEAD" });
+        if (!stop && (files.some((f) => f.endsWith(".pmtiles")) || head.ok)) {
+          setTileWarn("");
+          setTilesKey((k) => k + 1);
+        }
+      } catch {
+        /* jeszcze nie ma */
+      }
+    };
+    tick();
+    const id = setInterval(tick, 4000);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, [tileWarn]);
+
   function toggleCat(c: Category) {
     setCats((s) => ({ ...s, [c]: !s[c] }));
   }
@@ -74,6 +99,7 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
   return (
     <div className="map-wrap">
       <MapView
+        key={tilesKey}
         points={filtered}
         cats={cats}
         services={services}

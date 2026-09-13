@@ -4,7 +4,8 @@
 }
 
 :80 {
-  encode gzip
+  @notTiles not path /tiles/*
+  encode @notTiles gzip
 
   handle /api/* {
     reverse_proxy {$PB_UPSTREAM}

@@ -54,13 +54,13 @@ Centrala nie loguje użytkowników innych węzłów. Użytkownicy są zawsze lok
 
 ## Kafelki
 
-Na stronie **Węzeł** (`/status`, operator): **Pobierz gminę** / województwo / Polskę. Węzeł wycina PMTiles z dziennego buildu Protomaps (HTTP range) do `./tiles/poland.pmtiles`. Potem mapa nie woła internetu.
+Na stronie **Węzeł** (`/status`, operator): **Pobierz gminę** / województwo / Polskę. Węzeł wycina PMTiles z **aktualnego** dziennego buildu Protomaps (HTTP range; `PMTILES_SOURCE=auto`) do `./tiles/poland.pmtiles`. Datowane URL-e znikają po ok. tygodniu — nie wklejaj starej daty na sztywno. Potem mapa nie woła internetu.
 
 Albo z USB: **Wgraj plik PMTiles**. Albo na hoście:
 
 ```bash
 scripts/make-tiles.sh
-# albo: docker compose exec sync-worker pmtiles extract "$PMTILES_SOURCE" /tiles/poland.pmtiles --bbox=18.82,50.30,18.98,50.42 --maxzoom=14
+# albo: docker compose exec sync-worker sh -c 'pmtiles extract "$PMTILES_SOURCE" /tiles/poland.pmtiles --bbox=18.82,50.30,18.98,50.42 --maxzoom=14'
 ```
 
 Cała Polska przy z14 to kilka GB; powiat przy z14 — dziesiątki MB (zalecane dla OSP). Atrybucja: © OpenStreetMap, Protomaps. Bez pliku mapa pokaże ostrzeżenie i — tylko gdy jest internet — raster OSM.

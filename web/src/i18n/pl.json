@@ -215,9 +215,10 @@
     "gmina": "Pobierz gminę",
     "wojewodztwo": "Pobierz województwo",
     "polska": "Pobierz Polskę (z12)",
-    "uwagaPolska": "Polska przy zbliżeniu z11–z12 to setki MB. Dla remizy OSP wystarczy gmina.",
+    "uwagaPolska": "Polska przy zbliżeniu z11 to setki MB. Dla remizy OSP wystarczy gmina.",
     "wgraj": "Wgraj plik PMTiles",
-    "wgrano": "Wgrano kafelki. Odśwież mapę.",
+    "wgrano": "Wgrano kafelki. Mapa wczyta je sama — albo odśwież stronę.",
+    "gotowe": "Kafelki zapisane na węźle. Wróć na mapę — wczyta je bez internetu.",
     "bladWgrania": "Nie udało się wgrać pliku."
   },
   "aed": {

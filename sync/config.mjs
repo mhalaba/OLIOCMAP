@@ -26,7 +26,7 @@ export const cfg = {
   tilesDir: env("TILES_DIR", "/tiles"),
   tilesBbox: env("TILES_BBOX", "18.82,50.30,18.98,50.42"),
   tilesMaxzoom: env("TILES_MAXZOOM", "14"),
-  pmtilesSource: env("PMTILES_SOURCE", "https://build.protomaps.com/20260904.pmtiles"),
+  pmtilesSource: env("PMTILES_SOURCE", "auto"),
   pmtilesBin: env("PMTILES_BIN", "pmtiles"),
 };
 

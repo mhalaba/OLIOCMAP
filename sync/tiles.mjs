@@ -4,6 +4,7 @@ import { mkdir, rename, stat, writeFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
+import { resolvePmtilesSource } from "../shared/pmtiles_source.mjs";
 
 export const TILE_PRESETS = {
   gmina: { maxzoom: 14 },
@@ -19,6 +20,7 @@ export function createTileManager({ cfg, log = console }) {
     file: "",
     bytes: 0,
     startedAt: "",
+    source: "",
   };
 
   function indexPath() {
@@ -28,7 +30,7 @@ export function createTileManager({ cfg, log = console }) {
   async function listFiles() {
     if (!existsSync(cfg.tilesDir)) return [];
     const names = await readdir(cfg.tilesDir);
-    return names.filter((n) => n.endsWith(".pmtiles"));
+    return names.filter((n) => n.endsWith(".pmtiles") && !n.endsWith(".part"));
   }
 
   async function writeIndex(files) {
@@ -55,7 +57,7 @@ export function createTileManager({ cfg, log = console }) {
         wojewodztwo: TILE_PRESETS.wojewodztwo,
         polska: TILE_PRESETS.polska,
       },
-      source: cfg.pmtilesSource,
+      source: job.source || cfg.pmtilesSource,
     };
   }
 
@@ -81,9 +83,12 @@ export function createTileManager({ cfg, log = console }) {
         err += d.toString();
       });
       child.on("error", reject);
-      child.on("close", (code) => {
+      child.on("close", (code, signal) => {
         if (code === 0) resolve(out.trim());
-        else reject(new Error(err.trim() || out.trim() || "pmtiles kod " + code));
+        else {
+          const msg = (err.trim() || out.trim() || (signal ? "sygnał " + signal : "kod " + code)).slice(0, 450);
+          reject(new Error("pmtiles extract: " + msg));
+        }
       });
     });
   }
@@ -102,13 +107,17 @@ export function createTileManager({ cfg, log = console }) {
     job.startedAt = new Date().toISOString();
     job.file = "";
     job.bytes = 0;
+    job.source = "";
     const dest = join(cfg.tilesDir, "poland.pmtiles");
     const tmp = dest + ".part";
     try {
       await mkdir(cfg.tilesDir, { recursive: true });
+      const source = await resolvePmtilesSource({ configured: cfg.pmtilesSource });
+      job.source = source;
+      log.log?.("[tiles] źródło", source, spec);
       await runPmtiles([
         "extract",
-        cfg.pmtilesSource,
+        source,
         tmp,
         `--bbox=${spec.bbox}`,
         `--maxzoom=${spec.maxzoom}`,
@@ -133,6 +142,7 @@ export function createTileManager({ cfg, log = console }) {
     job.state = "running";
     job.preset = "wgraj";
     job.error = "";
+    job.source = "upload";
     job.startedAt = new Date().toISOString();
     await mkdir(cfg.tilesDir, { recursive: true });
     const dest = join(cfg.tilesDir, "poland.pmtiles");
@@ -147,11 +157,17 @@ export function createTileManager({ cfg, log = console }) {
     return job;
   }
 
-  return { job, status, extract, saveUpload, startExtract(preset) {
-    extract(preset).catch((e) => {
-      job.state = "error";
-      job.error = String(e.message || e).slice(0, 500);
-    });
-    return job;
-  } };
+  return {
+    job,
+    status,
+    extract,
+    saveUpload,
+    startExtract(preset) {
+      extract(preset).catch((e) => {
+        job.state = "error";
+        job.error = String(e.message || e).slice(0, 500);
+      });
+      return job;
+    },
+  };
 }
