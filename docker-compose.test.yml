@@ -13,6 +13,7 @@ services:
       POTRZEBA_TTL_H: "0.01"
       SYNC_INTERVAL_S: "5"
       CENTRAL_URL: http://central-caddy
+      AED_IMPORT: "off"
 
   central-pocketbase:
     environment:

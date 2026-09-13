@@ -4,7 +4,7 @@ import { FilterChips } from "../components/FilterChips";
 import { Legend } from "../components/Legend";
 import { MapView } from "../components/MapView";
 import { t } from "../i18n";
-import { currentUser, pb } from "../lib/pb";
+import { currentUser, isOperator, pb } from "../lib/pb";
 import { DEFAULT_CATEGORY_ON, type Category, type Point, type Service } from "../types";
 
 export function MapPage({ intervalDays }: { intervalDays: number }) {
@@ -21,21 +21,24 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
     let live = true;
     (async () => {
       try {
-        const res = await pb.collection("points").getFullList<Point>({
-          filter: 'status = "verified" && blocked = false && category != "potrzeba"',
-          sort: "-updated_at",
+        const feed = await fetch("/api/feed.geojson").then((r) => {
+          if (!r.ok) throw new Error("feed");
+          return r.json();
         });
-        if (live) setPoints(res);
+        const mapped: Point[] = (feed.features || []).map((f: { properties: Point; geometry: { coordinates: number[] } }) => ({
+          ...f.properties,
+          public_lon: f.geometry.coordinates[0],
+          public_lat: f.geometry.coordinates[1],
+          status: "verified" as const,
+        }));
+        if (live) setPoints(mapped);
       } catch {
         try {
-          const feed = await fetch("/api/feed.geojson").then((r) => r.json());
-          const mapped: Point[] = (feed.features || []).map((f: { properties: Point; geometry: { coordinates: number[] } }) => ({
-            ...f.properties,
-            public_lon: f.geometry.coordinates[0],
-            public_lat: f.geometry.coordinates[1],
-            status: "verified",
-          }));
-          if (live) setPoints(mapped);
+          const res = await pb.collection("points").getFullList<Point>({
+            filter: 'status = "verified" && blocked = false && category != "potrzeba"',
+            sort: "-updated_at",
+          });
+          if (live) setPoints(res);
         } catch {
           /* empty */
         }
@@ -96,7 +99,19 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
         <FilterChips cats={cats} services={services} onToggleCat={toggleCat} onToggleSvc={toggleSvc} />
         <Legend />
       </div>
-      {tileWarn ? <div className="warn-offline">{tileWarn}</div> : null}
+      {tileWarn ? (
+        <div className="warn-offline">
+          {tileWarn}
+          {isOperator(user) ? (
+            <>
+              {" "}
+              <Link to="/status" style={{ color: "#fff" }}>
+                {t("map.pobierzKafelki")}
+              </Link>
+            </>
+          ) : null}
+        </div>
+      ) : null}
       <button
         type="button"
         className="fab"

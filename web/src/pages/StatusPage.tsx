@@ -11,9 +11,33 @@ export function StatusPage() {
   const user = currentUser();
   const op = isOperator(user);
   const [storage, setStorage] = useState("");
+  const [tiles, setTiles] = useState<{
+    files: { name: string; bytes: number }[];
+    job: { state: string; error?: string; bytes?: number; preset?: string };
+  } | null>(null);
+  const [aed, setAed] = useState<{ state: string; total: number; done: number; skipped: number; error: string } | null>(null);
+  const [msg, setMsg] = useState("");
+
+  async function refreshOps() {
+    if (!op) return;
+    const h = { Authorization: pb.authStore.token };
+    try {
+      const t = await fetch("/sync/v1/tiles/status", { headers: h }).then((r) => r.json());
+      setTiles(t);
+    } catch {
+      setTiles(null);
+    }
+    try {
+      const a = await fetch("/sync/v1/aed/status", { headers: h }).then((r) => r.json());
+      setAed(a);
+    } catch {
+      setAed(null);
+    }
+  }
 
   useEffect(() => {
     fetchStatus().then(setSt).catch(() => {});
+    refreshOps();
     if (navigator.storage && navigator.storage.estimate) {
       navigator.storage.estimate().then((e) => {
         const used = Math.round((e.usage || 0) / 1048576);
@@ -21,7 +45,43 @@ export function StatusPage() {
         setStorage(`${used} / ${quota} MB`);
       });
     }
-  }, []);
+    const id = setInterval(refreshOps, 2500);
+    return () => clearInterval(id);
+  }, [op]);
+
+  async function startTiles(preset: string) {
+    setMsg("");
+    const res = await fetch("/sync/v1/tiles/download", {
+      method: "POST",
+      headers: { Authorization: pb.authStore.token, "Content-Type": "application/json" },
+      body: JSON.stringify({ preset }),
+    });
+    if (!res.ok) setMsg(t("err.siec"));
+    await refreshOps();
+  }
+
+  async function uploadTiles(file: File) {
+    setMsg("");
+    const res = await fetch("/sync/v1/tiles/upload", {
+      method: "POST",
+      headers: { Authorization: pb.authStore.token, "Content-Type": "application/octet-stream" },
+      body: file,
+    });
+    if (!res.ok) setMsg(t("tiles.bladWgrania"));
+    else setMsg(t("tiles.wgrano"));
+    await refreshOps();
+  }
+
+  async function startAed(source: string) {
+    setMsg("");
+    const res = await fetch("/sync/v1/aed/import", {
+      method: "POST",
+      headers: { Authorization: pb.authStore.token, "Content-Type": "application/json" },
+      body: JSON.stringify({ source }),
+    });
+    if (!res.ok) setMsg(t("err.siec"));
+    await refreshOps();
+  }
 
   async function downloadBundle() {
     const res = await fetch("/sync/v1/export.bundle", { headers: { Authorization: pb.authStore.token } });
@@ -89,6 +149,72 @@ export function StatusPage() {
           </p>
         ))}
       </div>
+      {msg ? <p className="note info">{msg}</p> : null}
+      {op ? (
+        <div className="card">
+          <h2>{t("tiles.tytul")}</h2>
+          <p>{t("tiles.opis")}</p>
+          {(tiles?.files || []).length ? (
+            <ul className="count-list">
+              {tiles!.files.map((f) => (
+                <li key={f.name}>
+                  <span>{f.name}</span>
+                  <strong>{Math.max(1, Math.round(f.bytes / 1048576))} MB</strong>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>{t("tiles.brak")}</p>
+          )}
+          {tiles?.job?.state === "running" ? <p>{t("tiles.trwa")}</p> : null}
+          {tiles?.job?.error ? <p className="note">{tiles.job.error}</p> : null}
+          <div className="row" style={{ marginTop: 8 }}>
+            <button type="button" className="btn primary" disabled={tiles?.job?.state === "running"} onClick={() => startTiles("gmina")}>
+              {t("tiles.gmina")}
+            </button>
+            <button type="button" className="btn" disabled={tiles?.job?.state === "running"} onClick={() => startTiles("wojewodztwo")}>
+              {t("tiles.wojewodztwo")}
+            </button>
+            <button type="button" className="btn" disabled={tiles?.job?.state === "running"} onClick={() => startTiles("polska")}>
+              {t("tiles.polska")}
+            </button>
+          </div>
+          <p className="hint">{t("tiles.uwagaPolska")}</p>
+          <label className="btn" style={{ display: "inline-flex", alignItems: "center", marginTop: 8 }}>
+            {t("tiles.wgraj")}
+            <input
+              type="file"
+              accept=".pmtiles,application/octet-stream"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadTiles(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+      ) : null}
+      {op ? (
+        <div className="card">
+          <h2>{t("aed.tytul")}</h2>
+          <p>{t("aed.opis")}</p>
+          {aed ? (
+            <p>
+              {t("aed.postep")}: {aed.done} / {aed.total} ({t("aed.pominieto")} {aed.skipped}) — {t("aed.stan." + aed.state)}
+            </p>
+          ) : null}
+          {aed?.error ? <p className="note">{aed.error}</p> : null}
+          <div className="row">
+            <button type="button" className="btn" disabled={aed?.state === "running"} onClick={() => startAed("bundled")}>
+              {t("aed.paczka")}
+            </button>
+            <button type="button" className="btn" disabled={aed?.state === "running"} onClick={() => startAed("fetch")}>
+              {t("aed.internet")}
+            </button>
+          </div>
+        </div>
+      ) : null}
       {op && st?.public_key ? (
         <div className="card">
           <h2>{t("statusPage.kluczPub")}</h2>

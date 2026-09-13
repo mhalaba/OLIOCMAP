@@ -77,7 +77,7 @@ export function createPb() {
         items.push(...(data.items || []));
         if (!data.items || data.items.length < 200) break;
         page += 1;
-        if (page > 50) break;
+        if (page > 500) break;
       }
       return items;
     },

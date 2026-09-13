@@ -7,11 +7,11 @@ import type { Point } from "../types";
 
 type Tab = "kolejka" | "potwierdzenia" | "potrzeby" | "bledy" | "uzytkownicy";
 
-async function loadPoints(): Promise<Point[]> {
+async function loadPoints(filter: string): Promise<Point[]> {
   let lastErr: unknown;
   for (let i = 0; i < 4; i++) {
     try {
-      return await pb.collection("points").getFullList<Point>({ sort: "-updated_at" });
+      return await pb.collection("points").getFullList<Point>({ filter, sort: "-updated_at" });
     } catch (err) {
       lastErr = err;
       const status = (err as { status?: number })?.status;
@@ -30,6 +30,7 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
   const user = currentUser();
   const [tab, setTab] = useState<Tab>("kolejka");
   const [points, setPoints] = useState<Point[]>([]);
+  const [counts, setCounts] = useState({ kolejka: 0, potwierdzenia: 0, potrzeby: 0 });
   const [loadErr, setLoadErr] = useState("");
   const [reports, setReports] = useState<{ id: string; point_id: string; reason: string; text: string; handled: boolean }[]>([]);
   const [users, setUsers] = useState<{ id: string; email: string; name: string; role: string }[]>([]);
@@ -40,16 +41,36 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
       return;
     }
     reload();
-  }, [user, nav]);
+  }, [user, nav, tab]);
 
   async function reload() {
     setLoadErr("");
     try {
-      const all = await loadPoints();
-      setPoints(all);
+      if (tab === "kolejka") {
+        setPoints(await loadPoints('status = "pending" && category != "potrzeba"'));
+      } else if (tab === "potwierdzenia") {
+        setPoints(
+          await loadPoints(
+            'status = "verified" && (category != "aed" || external_ref = "")'
+          )
+        );
+      } else if (tab === "potrzeby") {
+        setPoints(await loadPoints('category = "potrzeba" && status != "expired"'));
+      } else {
+        setPoints([]);
+      }
     } catch {
       setLoadErr(t("err.siec"));
       return;
+    }
+    try {
+      const [k, n] = await Promise.all([
+        pb.collection("points").getList(1, 1, { filter: 'status = "pending" && category != "potrzeba"' }),
+        pb.collection("points").getList(1, 1, { filter: 'category = "potrzeba" && status != "expired"' }),
+      ]);
+      setCounts((c) => ({ ...c, kolejka: k.totalItems, potrzeby: n.totalItems }));
+    } catch {
+      /* keep */
     }
     try {
       const r = await pb.collection("reports").getFullList<{ id: string; point_id: string; reason: string; text: string; handled: boolean }>({
@@ -133,7 +154,8 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
       ) : null}
       <div className="tabs">
         {(["kolejka", "potwierdzenia", "potrzeby", "bledy"] as Tab[]).map((k) => {
-          const n = k === "kolejka" ? pending.length : k === "potwierdzenia" ? overdue.length : k === "potrzeby" ? needs.length : reports.length;
+          const n =
+            k === "kolejka" ? counts.kolejka : k === "potwierdzenia" ? overdue.length : k === "potrzeby" ? counts.potrzeby : reports.length;
           return (
             <button key={k} type="button" className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
               {t("op." + k)}

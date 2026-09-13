@@ -18,6 +18,16 @@ export const cfg = {
   listen: Number(env("SYNC_PORT", "8091")) || 8091,
   appVersion: env("APP_VERSION", "0.1.0"),
   buildTime: Number(env("BUILD_TIME_MS", "0")) || 0,
+  gminaName: env("NODE_GMINA_NAME", "Bytom"),
+  gminaTeryt: env("NODE_GMINA_TERYT", "2462011"),
+  aedImport: env("AED_IMPORT", "bundled"),
+  aedBbox: env("AED_BBOX", ""),
+  aedBundlePath: env("AED_BUNDLE_PATH", "/app/data/openaedmap-pl.geojson.gz"),
+  tilesDir: env("TILES_DIR", "/tiles"),
+  tilesBbox: env("TILES_BBOX", "18.82,50.30,18.98,50.42"),
+  tilesMaxzoom: env("TILES_MAXZOOM", "14"),
+  pmtilesSource: env("PMTILES_SOURCE", "https://build.protomaps.com/20260904.pmtiles"),
+  pmtilesBin: env("PMTILES_BIN", "pmtiles"),
 };
 
 export function parsePeersEnv() {

@@ -124,9 +124,11 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
             sources: { basemap: { type: "vector", url: `pmtiles:///tiles/${file}` } },
             layers: [
               { id: "bg", type: "background", paint: { "background-color": "#e8e4dc" } },
-              { id: "water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#b7d2e8" } },
               { id: "earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e8e4dc" } },
-              { id: "roads", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#fff", "line-width": 1.1 } },
+              { id: "water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#b7d2e8" } },
+              { id: "landuse", type: "fill", source: "basemap", "source-layer": "landuse", paint: { "fill-color": "#d5e3c8", "fill-opacity": 0.5 } },
+              { id: "roads", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#fff", "line-width": 1.2 } },
+              { id: "buildings", type: "fill", source: "basemap", "source-layer": "buildings", paint: { "fill-color": "#d8d2c8", "fill-opacity": 0.6 } },
             ],
           };
           if (!style.sources) style.sources = {};

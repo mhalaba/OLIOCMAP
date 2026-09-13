@@ -54,11 +54,22 @@ Centrala nie loguje użytkowników innych węzłów. Użytkownicy są zawsze lok
 
 ## Kafelki
 
+Na stronie **Węzeł** (`/status`, operator): **Pobierz gminę** / województwo / Polskę. Węzeł wycina PMTiles z dziennego buildu Protomaps (HTTP range) do `./tiles/poland.pmtiles`. Potem mapa nie woła internetu.
+
+Albo z USB: **Wgraj plik PMTiles**. Albo na hoście:
+
 ```bash
 scripts/make-tiles.sh
+# albo: docker compose exec sync-worker pmtiles extract "$PMTILES_SOURCE" /tiles/poland.pmtiles --bbox=18.82,50.30,18.98,50.42 --maxzoom=14
 ```
 
-Wgraj `*.pmtiles` do `./tiles` i uzupełnij `tiles/index.json`. Cała Polska przy z14 to kilka GB; powiat przy z15 — dziesiątki MB (zalecane dla OSP). Atrybucja: © OpenStreetMap, Protomaps. Bez pliku mapa pokaże ostrzeżenie i — tylko gdy jest internet — raster OSM.
+Cała Polska przy z14 to kilka GB; powiat przy z14 — dziesiątki MB (zalecane dla OSP). Atrybucja: © OpenStreetMap, Protomaps. Bez pliku mapa pokaże ostrzeżenie i — tylko gdy jest internet — raster OSM.
+
+## AED z OpenAEDMap
+
+Przy starcie węzeł wgrywa defibrylatory z paczki `data/openaedmap-pl.geojson.gz` (eksport [OpenAEDMap](https://openaedmap.org/api/v1/countries/PL.geojson), dane OSM). To nie jest skrapanie. Rekordy mają `external_ref=osm:…`, status zweryfikowany, interwał potwierdzenia 365 dni — **potwierdź w terenie**.
+
+Operator: `/status` → **Wgraj z paczki węzła** albo **Pobierz z OpenAEDMap** (gdy jest sieć). `AED_IMPORT=off` wyłącza autoimport (tak jest w testach). `AED_BBOX` ogranicza wycinek.
 
 ## HTTPS i tryb offline (PWA)
 

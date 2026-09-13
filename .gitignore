@@ -12,6 +12,8 @@ tests/playwright-report/
 tests/test-results/
 tiles/*.pmtiles
 tiles/*.pmtiles-journal
+tiles/*.part
+tiles/aed-import.json
 backups/
 *.log
 .DS_Store

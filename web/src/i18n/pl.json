@@ -24,8 +24,9 @@
     "legenda": "Legenda",
     "filtry": "Filtry",
     "mojaPozycja": "Moja pozycja",
-    "brakKafelkow": "Brak kafelków offline — wgraj plik PMTiles do katalogu ./tiles",
+    "brakKafelkow": "Brak kafelków offline — pobierz mapę na stronie Węzeł albo wgraj plik PMTiles.",
     "brakKafelkowKrotko": "Brak kafelków offline",
+    "pobierzKafelki": "Pobierz mapę offline",
     "nawiguj": "Nawiguj",
     "zglosBlad": "Zgłoś błąd",
     "zamknij": "Zamknij",
@@ -205,6 +206,33 @@
     "peers": "Sąsiedzi",
     "pamiec": "Pamięć przeglądarki",
     "kluczPub": "Klucz publiczny tego węzła"
+  },
+  "tiles": {
+    "tytul": "Mapa offline",
+    "opis": "Pobierz kafelki PMTiles na ten węzeł (wymaga internetu raz). Potem mapa działa bez sieci. Atrybucja: OpenStreetMap, Protomaps.",
+    "brak": "Brak pliku kafelków na węźle.",
+    "trwa": "Pobieranie w toku — nie wyłączaj węzła.",
+    "gmina": "Pobierz gminę",
+    "wojewodztwo": "Pobierz województwo",
+    "polska": "Pobierz Polskę (z12)",
+    "uwagaPolska": "Polska przy zbliżeniu z11–z12 to setki MB. Dla remizy OSP wystarczy gmina.",
+    "wgraj": "Wgraj plik PMTiles",
+    "wgrano": "Wgrano kafelki. Odśwież mapę.",
+    "bladWgrania": "Nie udało się wgrać pliku."
+  },
+  "aed": {
+    "tytul": "AED z OpenAEDMap",
+    "opis": "Defibrylatory z OpenStreetMap (OpenAEDMap). Import lokalny, bez skrapania. Potwierdź w terenie — dane OSM bywają nieaktualne.",
+    "postep": "Wgrane",
+    "pominieto": "pominięte",
+    "paczka": "Wgraj z paczki węzła",
+    "internet": "Pobierz z OpenAEDMap",
+    "stan": {
+      "idle": "czeka",
+      "running": "w toku",
+      "ok": "gotowe",
+      "error": "nieudane"
+    }
   },
   "privacy": {
     "tytul": "Polityka prywatności",

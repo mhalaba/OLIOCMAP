@@ -1,0 +1,157 @@
+import { spawn } from "node:child_process";
+import { createWriteStream } from "node:fs";
+import { mkdir, rename, stat, writeFile, readdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { pipeline } from "node:stream/promises";
+
+export const TILE_PRESETS = {
+  gmina: { maxzoom: 14 },
+  wojewodztwo: { bbox: "18.03,49.39,19.97,50.81", maxzoom: 13 },
+  polska: { bbox: "14.07,49.00,24.29,54.84", maxzoom: 11 },
+};
+
+export function createTileManager({ cfg, log = console }) {
+  const job = {
+    state: "idle",
+    preset: "",
+    error: "",
+    file: "",
+    bytes: 0,
+    startedAt: "",
+  };
+
+  function indexPath() {
+    return join(cfg.tilesDir, "index.json");
+  }
+
+  async function listFiles() {
+    if (!existsSync(cfg.tilesDir)) return [];
+    const names = await readdir(cfg.tilesDir);
+    return names.filter((n) => n.endsWith(".pmtiles"));
+  }
+
+  async function writeIndex(files) {
+    await mkdir(cfg.tilesDir, { recursive: true });
+    await writeFile(indexPath(), JSON.stringify({ files }, null, 2));
+  }
+
+  async function status() {
+    const files = await listFiles();
+    const details = [];
+    for (const f of files) {
+      try {
+        const s = await stat(join(cfg.tilesDir, f));
+        details.push({ name: f, bytes: s.size });
+      } catch {
+        details.push({ name: f, bytes: 0 });
+      }
+    }
+    return {
+      files: details,
+      job: { ...job },
+      presets: {
+        gmina: { bbox: cfg.tilesBbox, maxzoom: Number(cfg.tilesMaxzoom) || 14 },
+        wojewodztwo: TILE_PRESETS.wojewodztwo,
+        polska: TILE_PRESETS.polska,
+      },
+      source: cfg.pmtilesSource,
+    };
+  }
+
+  function resolvePreset(name) {
+    if (name === "gmina") {
+      return { bbox: cfg.tilesBbox, maxzoom: Number(cfg.tilesMaxzoom) || 14 };
+    }
+    const p = TILE_PRESETS[name];
+    if (!p) return null;
+    return { bbox: p.bbox || cfg.tilesBbox, maxzoom: p.maxzoom };
+  }
+
+  function runPmtiles(args) {
+    return new Promise((resolve, reject) => {
+      const bin = cfg.pmtilesBin || "pmtiles";
+      const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
+      let out = "";
+      let err = "";
+      child.stdout.on("data", (d) => {
+        out += d.toString();
+      });
+      child.stderr.on("data", (d) => {
+        err += d.toString();
+      });
+      child.on("error", reject);
+      child.on("close", (code) => {
+        if (code === 0) resolve(out.trim());
+        else reject(new Error(err.trim() || out.trim() || "pmtiles kod " + code));
+      });
+    });
+  }
+
+  async function extract(preset) {
+    if (job.state === "running") return job;
+    const spec = resolvePreset(preset);
+    if (!spec || !spec.bbox) {
+      job.state = "error";
+      job.error = "Nieznany zakres albo brak TILES_BBOX";
+      return job;
+    }
+    job.state = "running";
+    job.preset = preset;
+    job.error = "";
+    job.startedAt = new Date().toISOString();
+    job.file = "";
+    job.bytes = 0;
+    const dest = join(cfg.tilesDir, "poland.pmtiles");
+    const tmp = dest + ".part";
+    try {
+      await mkdir(cfg.tilesDir, { recursive: true });
+      await runPmtiles([
+        "extract",
+        cfg.pmtilesSource,
+        tmp,
+        `--bbox=${spec.bbox}`,
+        `--maxzoom=${spec.maxzoom}`,
+      ]);
+      await rename(tmp, dest);
+      const s = await stat(dest);
+      job.bytes = s.size;
+      job.file = "poland.pmtiles";
+      await writeIndex(["poland.pmtiles"]);
+      job.state = "ok";
+      log.log?.("[tiles] zapisano", dest, s.size);
+    } catch (err) {
+      job.state = "error";
+      job.error = String(err.message || err).slice(0, 500);
+      log.error?.("[tiles]", job.error);
+    }
+    return job;
+  }
+
+  async function saveUpload(req) {
+    if (job.state === "running") throw new Error("Trwa inne pobieranie");
+    job.state = "running";
+    job.preset = "wgraj";
+    job.error = "";
+    job.startedAt = new Date().toISOString();
+    await mkdir(cfg.tilesDir, { recursive: true });
+    const dest = join(cfg.tilesDir, "poland.pmtiles");
+    const tmp = dest + ".part";
+    await pipeline(req, createWriteStream(tmp));
+    await rename(tmp, dest);
+    const s = await stat(dest);
+    job.bytes = s.size;
+    job.file = "poland.pmtiles";
+    await writeIndex(["poland.pmtiles"]);
+    job.state = "ok";
+    return job;
+  }
+
+  return { job, status, extract, saveUpload, startExtract(preset) {
+    extract(preset).catch((e) => {
+      job.state = "error";
+      job.error = String(e.message || e).slice(0, 500);
+    });
+    return job;
+  } };
+}

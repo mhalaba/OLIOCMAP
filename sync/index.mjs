@@ -10,8 +10,12 @@ import { generateNodeKeyPair, privateKeyFromB64, publicKeyFromB64, signRow, veri
 import { parseHlc, formatHlc, wallMs } from "../shared/hlc.mjs";
 import { recordToRow, rowToBody } from "./rows.mjs";
 import { canonicalJson } from "../shared/canonical.mjs";
+import { createAedImporter } from "./import_aed.mjs";
+import { createTileManager } from "./tiles.mjs";
 
 const pb = createPb();
+const aed = createAedImporter({ pb, cfg, log: console });
+const tiles = createTileManager({ cfg, log: console });
 const SELF_STATUS_ID = "self00000000000";
 const backoff = new Map();
 let keyPair = null;
@@ -616,6 +620,81 @@ async function handle(req, res) {
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/sync/v1/tiles/status") {
+      const user = await authorizeOperator(req);
+      if (!user) {
+        json(403, { error: "tylko operator" });
+        return;
+      }
+      json(200, await tiles.status());
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/sync/v1/tiles/download") {
+      const user = await authorizeOperator(req);
+      if (!user) {
+        json(403, { error: "tylko operator" });
+        return;
+      }
+      const raw = await readBody(req, 4000);
+      let body = {};
+      try {
+        body = JSON.parse(raw.toString("utf8") || "{}");
+      } catch {
+        body = {};
+      }
+      const preset = body.preset || "gmina";
+      json(202, tiles.startExtract(preset));
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/sync/v1/tiles/upload") {
+      const user = await authorizeOperator(req);
+      if (!user) {
+        json(403, { error: "tylko operator" });
+        return;
+      }
+      try {
+        const st = await tiles.saveUpload(req);
+        json(200, st);
+      } catch (err) {
+        json(400, { error: String(err.message || err).slice(0, 300) });
+      }
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/sync/v1/aed/status") {
+      const user = await authorizeOperator(req);
+      if (!user) {
+        json(403, { error: "tylko operator" });
+        return;
+      }
+      json(200, aed.snapshot());
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/sync/v1/aed/import") {
+      const user = await authorizeOperator(req);
+      if (!user) {
+        json(403, { error: "tylko operator" });
+        return;
+      }
+      const raw = await readBody(req, 4000);
+      let body = {};
+      try {
+        body = JSON.parse(raw.toString("utf8") || "{}");
+      } catch {
+        body = {};
+      }
+      if (aed.job.state === "running") {
+        json(202, aed.snapshot());
+        return;
+      }
+      aed.run({ source: body.source || "bundled", bbox: body.bbox }).catch(() => {});
+      json(202, aed.snapshot());
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/sync/v1/export.bundle") {
       const user = await authorizeOperator(req);
       if (!user) {
@@ -716,5 +795,6 @@ createServer((req, res) => {
   });
 }).listen(cfg.listen, "0.0.0.0", () => {
   console.log(`[sync] nasłuch :${cfg.listen}`);
+  aed.boot();
 });
 loop();

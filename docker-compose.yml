@@ -21,6 +21,13 @@ x-node-env: &node-env
   SYNC_SUPERUSER_EMAIL: ${SYNC_SUPERUSER_EMAIL:-sync@node.local}
   SYNC_SUPERUSER_PASSWORD: ${SYNC_SUPERUSER_PASSWORD:-change-me-too}
   APP_VERSION: ${APP_VERSION:-0.1.0}
+  AED_IMPORT: ${AED_IMPORT:-bundled}
+  AED_BBOX: ${AED_BBOX:-}
+  AED_BUNDLE_PATH: ${AED_BUNDLE_PATH:-/app/data/openaedmap-pl.geojson.gz}
+  TILES_DIR: ${TILES_DIR:-/tiles}
+  TILES_BBOX: ${TILES_BBOX:-18.82,50.30,18.98,50.42}
+  TILES_MAXZOOM: ${TILES_MAXZOOM:-14}
+  PMTILES_SOURCE: ${PMTILES_SOURCE:-https://build.protomaps.com/20260904.pmtiles}
 
 x-central-env: &central-env
   NODE_ID: central-01
@@ -45,6 +52,13 @@ x-central-env: &central-env
   SYNC_SUPERUSER_EMAIL: ${SYNC_SUPERUSER_EMAIL:-sync@node.local}
   SYNC_SUPERUSER_PASSWORD: ${SYNC_SUPERUSER_PASSWORD:-change-me-too}
   APP_VERSION: ${APP_VERSION:-0.1.0}
+  AED_IMPORT: "off"
+  AED_BBOX: ""
+  AED_BUNDLE_PATH: /app/data/openaedmap-pl.geojson.gz
+  TILES_DIR: /tiles
+  TILES_BBOX: ${TILES_BBOX:-18.82,50.30,18.98,50.42}
+  TILES_MAXZOOM: ${TILES_MAXZOOM:-14}
+  PMTILES_SOURCE: ${PMTILES_SOURCE:-https://build.protomaps.com/20260904.pmtiles}
 
 services:
   pocketbase:
@@ -82,6 +96,8 @@ services:
     volumes:
       - node_keys:/keys
       - ./shared:/app/shared:ro
+      - ./data:/app/data:ro
+      - ./tiles:/tiles
     depends_on:
       pocketbase:
         condition: service_healthy
@@ -195,6 +211,8 @@ services:
     volumes:
       - node_keys_central:/keys
       - ./shared:/app/shared:ro
+      - ./data:/app/data:ro
+      - ./tiles:/tiles
     depends_on:
       central-pocketbase:
         condition: service_healthy
