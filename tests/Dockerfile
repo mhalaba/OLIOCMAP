@@ -7,7 +7,11 @@ COPY shared /app/shared
 COPY scripts /app/scripts
 COPY pb_hooks /app/pb_hooks
 COPY pb_migrations /app/pb_migrations
+COPY sync /app/sync
 COPY web/src/types.ts /app/web/src/types.ts
+COPY .env.example /app/.env.example
+COPY docker-compose.yml /app/docker-compose.yml
+COPY caddy/entrypoint.sh /app/caddy/entrypoint.sh
 WORKDIR /app/tests
 RUN npm install
 ENV BASE_URL=http://127.0.0.1
