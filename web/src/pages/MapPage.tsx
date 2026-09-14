@@ -3,9 +3,21 @@ import { Link, useNavigate } from "react-router-dom";
 import { FilterChips } from "../components/FilterChips";
 import { Legend } from "../components/Legend";
 import { MapView } from "../components/MapView";
+import { CatIcon } from "../components/CategoryBadge";
 import { t } from "../i18n";
-import { currentUser, isOperator, pb } from "../lib/pb";
+import { currentUser, isOperator, pb, asArray } from "../lib/pb";
 import { DEFAULT_CATEGORY_ON, PUBLIC_CATEGORIES, type Category, type Point, type Service } from "../types";
+
+function pointCoords(p: Point): { lat: number; lon: number } | null {
+  const lat = p.public_lat ?? p.lat;
+  const lon = p.public_lon ?? p.lon;
+  if (lat == null || lon == null || p.public_geom === "hidden") return null;
+  return { lat, lon };
+}
+
+function pointHaystack(p: Point): string {
+  return [p.title, t(`cat.${p.category}`), p.category, p.description || ""].join(" ").toLowerCase();
+}
 
 function mergeById(base: Point[], extra: Point[]): Point[] {
   const map = new Map<string, Point>();
@@ -50,6 +62,8 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
   const [tileWarn, setTileWarn] = useState("");
   const [tilesKey, setTilesKey] = useState(0);
   const [hits, setHits] = useState<Point[]>([]);
+  const [focusPoint, setFocusPoint] = useState<Point | null>(null);
+  const [focusSeq, setFocusSeq] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -142,10 +156,21 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
     }
     setHits(
       points
-        .filter((p) => `${p.title} ${p.address || ""}`.toLowerCase().includes(query))
+        .filter((p) => {
+          if (p.blocked) return false;
+          if (p.status !== "verified" && p.status !== "pending") return false;
+          if (p.category === "potrzeba") return false;
+          if (!cats[p.category]) return false;
+          if (services.length) {
+            const svcs = asArray<Service>(p.services);
+            if (!services.every((s) => svcs.includes(s))) return false;
+          }
+          if (!pointCoords(p)) return false;
+          return pointHaystack(p).includes(query);
+        })
         .slice(0, 8)
     );
-  }, [q, points]);
+  }, [q, points, cats, services]);
 
   const filtered = useMemo(() => points, [points]);
 
@@ -157,6 +182,8 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
         cats={cats}
         services={services}
         intervalDays={intervalDays}
+        focusPoint={focusPoint}
+        focusSeq={focusSeq}
         onTilesMissing={(missing, online) => {
           if (missing && online) setTileWarn(t("map.brakKafelkow"));
           else if (missing) setTileWarn(t("map.brakKafelkowKrotko"));
@@ -164,17 +191,45 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
         }}
       />
       <div className="top-controls">
-        <input className="search" placeholder={t("map.szukaj")} value={q} onChange={(e) => setQ(e.target.value)} />
-        {hits.length ? (
-          <div className="card" style={{ margin: 0 }}>
-            {hits.map((h) => (
-              <div key={h.id} style={{ padding: "6px 0", fontWeight: 700 }}>
-                {h.title}
-                <div style={{ fontWeight: 500, fontSize: 12, color: "var(--muted)" }}>{h.address}</div>
-              </div>
-            ))}
-          </div>
-        ) : null}
+        <div className="search-box">
+          <input
+            className="search"
+            type="search"
+            role="searchbox"
+            placeholder={t("map.szukaj")}
+            aria-label={t("map.szukaj")}
+            autoComplete="off"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          {q.trim().length >= 2 ? (
+            <div className="search-hits card" role="listbox" aria-label={t("map.szukaj")}>
+              {hits.length ? (
+                hits.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    className="search-hit"
+                    role="option"
+                    onClick={() => {
+                      setFocusPoint(h);
+                      setFocusSeq((n) => n + 1);
+                      setQ("");
+                    }}
+                  >
+                    <CatIcon category={h.category} size={22} />
+                    <span>
+                      <strong>{h.title}</strong>
+                      <span className="search-hit-meta">{t(`cat.${h.category}`)}</span>
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <p className="search-empty">{t("map.szukajBrak")}</p>
+              )}
+            </div>
+          ) : null}
+        </div>
         <FilterChips cats={cats} services={services} onToggleCat={toggleCat} onToggleSvc={toggleSvc} />
         <Legend />
         {pendingMine ? <p className="map-hint">{t("map.oczekujeHint")}</p> : null}
