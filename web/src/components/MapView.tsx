@@ -15,6 +15,14 @@ import {
   type GeoFail,
   type GeoOk,
 } from "../lib/geolocation";
+import {
+  inPolandBounds,
+  POLAND_MASK_GEOJSON,
+  POLAND_MAX_BOUNDS,
+  POLAND_MAX_ZOOM,
+  POLAND_MIN_ZOOM,
+  POLAND_SOURCE_BOUNDS,
+} from "../lib/poland";
 import { CATEGORY_COLORS, type Category, type Point, type Service } from "../types";
 import { activationText, freshnessLabel, isPresentDate } from "../lib/format";
 import { asArray } from "../lib/pb";
@@ -354,6 +362,17 @@ function geoMessage(reason: GeoFail["reason"]): string {
   return t("map.geoNiedostepna");
 }
 
+function addPolandMask(map: Map) {
+  if (map.getSource("pl-mask")) return;
+  map.addSource("pl-mask", { type: "geojson", data: POLAND_MASK_GEOJSON });
+  map.addLayer({
+    id: "pl-mask",
+    type: "fill",
+    source: "pl-mask",
+    paint: { "fill-color": OC_BG, "fill-opacity": 1 },
+  });
+}
+
 export function MapView({ points, cats, services, pickMode, onPick, onTilesMissing, intervalDays = 14 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
@@ -448,6 +467,10 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
         }
         return;
       }
+      if (!inPolandBounds(result.lng, result.lat)) {
+        setGeoMsg(t("map.geoPozaPolska"));
+        return;
+      }
       setGeoMsg("");
       await new Promise<void>((resolve) => {
         let done = false;
@@ -514,7 +537,7 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
           };
           if (!style.glyphs) style.glyphs = GLYPHS;
           if (!style.sources) style.sources = {};
-          style.sources.basemap = { type: "vector", url: pmtilesUrl };
+          style.sources.basemap = { type: "vector", url: pmtilesUrl, bounds: POLAND_SOURCE_BOUNDS };
         }
       } catch {
         missing = true;
@@ -528,6 +551,7 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
             tiles: [OSM],
             tileSize: 256,
             attribution: "© OpenStreetMap",
+            bounds: POLAND_SOURCE_BOUNDS,
           },
         };
         style.layers = [
@@ -543,6 +567,10 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
         style,
         center: BYTOM,
         zoom: 12,
+        minZoom: POLAND_MIN_ZOOM,
+        maxZoom: POLAND_MAX_ZOOM,
+        maxBounds: POLAND_MAX_BOUNDS,
+        renderWorldCopies: false,
         attributionControl: { compact: true },
       });
       if (pickMode) {
@@ -564,6 +592,11 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
           if (cancelled) return;
           const iconsOk = await addCategoryImagesToMap(map);
           if (cancelled || !map.getStyle()) return;
+          try {
+            addPolandMask(map);
+          } catch {
+            /* maska opcjonalna */
+          }
           addPointLayers(map, iconsOk);
           const src = map.getSource("points") as GeoJSONSource | undefined;
           src?.setData(dataRef.current);

@@ -36,6 +36,7 @@
     "geoOdmowa": "Brak zgody na lokalizację. Możesz ją włączyć w ustawieniach przeglądarki.",
     "geoNiedostepna": "Nie udało się ustalić pozycji.",
     "geoSzukam": "Szukam pozycji…",
+    "geoPozaPolska": "Pozycja jest poza mapą Polski — zostawiam widok w kraju.",
     "brakKafelkow": "Brak kafelków offline — pobierz mapę na stronie Węzeł albo wgraj plik PMTiles.",
     "brakKafelkowKrotko": "Brak kafelków offline",
     "pobierzKafelki": "Pobierz mapę offline",

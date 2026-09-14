@@ -86,7 +86,7 @@ a { color: var(--navy); }
   flex: 1;
   min-height: 0;
 }
-.map-el { position: absolute; inset: 0; }
+.map-el { position: absolute; inset: 0; background: var(--bg); }
 
 .top-controls {
   position: absolute;
