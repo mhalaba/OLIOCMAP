@@ -137,6 +137,8 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   potrzeba: "#6c757d",
 };
 
+/** Ścieżki SVG znaczników: web/src/icons.ts (`CATEGORY_ICONS`). */
+
 export const DEFAULT_CATEGORY_ON: Record<Category, boolean> = {
   odpornosc: true,
   schron: true,

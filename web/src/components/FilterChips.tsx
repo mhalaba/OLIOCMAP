@@ -1,5 +1,6 @@
 import { t } from "../i18n";
 import { CATEGORY_COLORS, PUBLIC_CATEGORIES, SERVICE_FILTERS, type Category, type Service } from "../types";
+import { CatIcon } from "./CategoryBadge";
 
 export function FilterChips({
   cats,
@@ -21,15 +22,16 @@ export function FilterChips({
         {list.map((c) => {
           const on = !!cats[c];
           const color = CATEGORY_COLORS[c];
+          const ink = c === "prad" ? "#0f2744" : "#fff";
           return (
             <button
               key={c}
               type="button"
               className={`chip ${on ? "on" : ""}`}
-              style={on ? { background: color, color: c === "prad" ? "#1a1714" : "#fff" } : { color }}
+              style={on ? { background: color, color: ink, borderColor: color } : { color: "var(--ink)" }}
               onClick={() => onToggleCat(c)}
             >
-              <span className="dot" style={{ background: on ? (c === "prad" ? "#1a1714" : "#fff") : color }} />
+              <CatIcon category={c} size={22} />
               {t(`cat.${c}`)}
             </button>
           );
@@ -48,7 +50,7 @@ export function FilterChips({
                 key={s}
                 type="button"
                 className={`chip ${on ? "on" : ""}`}
-                style={on ? { background: "#1a1714", color: "#fff" } : {}}
+                style={on ? { background: "var(--navy)", color: "#fff", borderColor: "var(--navy)" } : {}}
                 onClick={() => onToggleSvc(s)}
               >
                 {t(`svc.${s}`)}

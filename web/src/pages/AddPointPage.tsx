@@ -18,6 +18,7 @@ import {
   type LinkType,
   type Service,
 } from "../types";
+import { CatIcon } from "../components/CategoryBadge";
 
 function toggleIn<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
@@ -163,11 +164,12 @@ export function AddPointPage() {
               aria-pressed={category === c}
               style={
                 category === c
-                  ? { background: CATEGORY_COLORS[c], color: c === "prad" ? "#1a1714" : "#fff", borderColor: CATEGORY_COLORS[c] }
+                  ? { background: CATEGORY_COLORS[c], color: c === "prad" ? "#0f2744" : "#fff", borderColor: CATEGORY_COLORS[c] }
                   : { borderColor: CATEGORY_COLORS[c], color: CATEGORY_COLORS[c] }
               }
               onClick={() => setCategory(c)}
             >
+              <CatIcon category={c} size={22} />
               {t("cat." + c)}
             </button>
           ))}

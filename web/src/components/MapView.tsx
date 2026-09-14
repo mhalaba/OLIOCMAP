@@ -3,12 +3,16 @@ import maplibregl, { type Map, type GeoJSONSource } from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { t } from "../i18n";
+import { addCategoryImagesToMap, categoryIconSrc, mapImageId } from "../icons";
 import { CATEGORY_COLORS, type Category, type Point, type Service } from "../types";
 import { activationText, freshnessLabel, isPresentDate } from "../lib/format";
 import { asArray } from "../lib/pb";
 
 const OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const BYTOM: [number, number] = [18.923, 50.348];
+const GLYPHS = "/glyphs/{fontstack}/{range}.pbf";
+const OC_BG = "#e8eef4";
+const OC_NAVY = "#1e3a5f";
 
 type Props = {
   points: Point[];
@@ -33,8 +37,18 @@ function toFeatures(points: Point[], cats: Record<string, boolean>, services: Se
     if (services.length && !services.every((s) => svcs.includes(s))) continue;
     const lat = p.public_lat ?? p.lat;
     const lon = p.public_lon ?? p.lon;
-    if (lat == null || lon == null || (p.public_geom === "hidden")) continue;
+    if (lat == null || lon == null || p.public_geom === "hidden") continue;
     const fresh = freshnessLabel(p.last_confirmed_at, p.confirm_interval_days || intervalDays);
+    const pending = p.status === "pending" ? 1 : 0;
+    const stale = !pending && fresh.stale ? 1 : 0;
+    const autonomy = p.autonomy_h || 0;
+    const readiness: "pending" | "stale" | "ok" | "verified" = pending
+      ? "pending"
+      : stale
+        ? "stale"
+        : autonomy >= 24
+          ? "ok"
+          : "verified";
     feats.push({
       type: "Feature",
       geometry: { type: "Point", coordinates: [lon, lat] },
@@ -42,11 +56,13 @@ function toFeatures(points: Point[], cats: Record<string, boolean>, services: Se
         id: p.id,
         title: p.title,
         category: p.category,
+        icon: mapImageId(p.category, readiness),
         color: CATEGORY_COLORS[p.category as Category],
-        stale: fresh.stale,
+        stale,
         hours: p.hours || "",
         activation: activationText(p.activation, p.activation_hours),
-        autonomy: p.autonomy_h || 0,
+        autonomy,
+        readiness,
         services: svcs.join(","),
         capability: caps.join(","),
         source_node: p.source_node || "",
@@ -55,7 +71,7 @@ function toFeatures(points: Point[], cats: Record<string, boolean>, services: Se
         capacity: p.capacity || 0,
         host_type: p.host_type || "",
         geom: p.public_geom || "precise",
-        pending: p.status === "pending" ? 1 : 0,
+        pending,
         plat: lat,
         plon: lon,
       },
@@ -66,9 +82,10 @@ function toFeatures(points: Point[], cats: Record<string, boolean>, services: Se
 
 function popupHtml(props: Record<string, unknown>): string {
   const cat = String(props.category || "");
-  const color = CATEGORY_COLORS[cat as Category] || "#333";
-  const stale = props.stale === true || props.stale === "true";
+  const color = CATEGORY_COLORS[cat as Category] || OC_NAVY;
+  const stale = props.stale === true || props.stale === "true" || props.stale === 1 || props.stale === "1";
   const pending = props.pending === 1 || props.pending === "1";
+  const ink = cat === "prad" ? "#0f2744" : "#fff";
   const svcs = String(props.services || "")
     .split(",")
     .filter(Boolean)
@@ -81,8 +98,9 @@ function popupHtml(props: Record<string, unknown>): string {
     .join(" · ");
   const auto = Number(props.autonomy) ? `Autonomia ${props.autonomy} h` : "";
   const cap = Number(props.capacity) ? `${props.capacity} os.` : "";
+  const icon = categoryIconSrc(cat);
   return `<div class="popup">
-    <span class="cat-badge" style="background:${color}">${t("cat." + cat)}</span>
+    <span class="cat-badge" style="background:${color};color:${ink}"><img class="cat-icon" src="${icon}" alt="" width="18" height="18">${t("cat." + cat)}</span>
     <h3>${escapeHtml(String(props.title || ""))}</h3>
     ${pending ? `<div class="stale">${escapeHtml(t("status.pending"))}</div>` : `<div class="${stale ? "stale" : "fresh"}">${escapeHtml(String(props.fresh || ""))}</div>`}
     ${props.activation ? `<div>${escapeHtml(String(props.activation))}</div>` : ""}
@@ -101,6 +119,171 @@ function popupHtml(props: Record<string, unknown>): string {
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
+const FALLBACK_LAYERS: maplibregl.LayerSpecification[] = [
+  { id: "bg", type: "background", paint: { "background-color": OC_BG } },
+  { id: "earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e6edf4" } },
+  {
+    id: "landcover",
+    type: "fill",
+    source: "basemap",
+    "source-layer": "landcover",
+    paint: { "fill-color": "#c5d3c9", "fill-opacity": 0.5 },
+  },
+  {
+    id: "landuse",
+    type: "fill",
+    source: "basemap",
+    "source-layer": "landuse",
+    paint: { "fill-color": "#d5dce4", "fill-opacity": 0.35 },
+  },
+  { id: "water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#5b8fb8" } },
+  {
+    id: "buildings",
+    type: "fill",
+    source: "basemap",
+    "source-layer": "buildings",
+    paint: { "fill-color": "#b8c4d0", "fill-opacity": 0.82 },
+  },
+  {
+    id: "roads-casing",
+    type: "line",
+    source: "basemap",
+    "source-layer": "roads",
+    paint: {
+      "line-color": OC_NAVY,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1.4, 11, 2.8, 14, 6.4],
+    },
+  },
+  {
+    id: "roads",
+    type: "line",
+    source: "basemap",
+    "source-layer": "roads",
+    paint: {
+      "line-color": "#ffffff",
+      "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.7, 11, 1.7, 14, 4.6],
+    },
+  },
+  {
+    id: "road-labels",
+    type: "symbol",
+    source: "basemap",
+    "source-layer": "roads",
+    minzoom: 11,
+    layout: {
+      "symbol-placement": "line",
+      "text-field": ["coalesce", ["get", "name:pl"], ["get", "name"], ["get", "name:en"]],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 11, 14, 13.5],
+    },
+    paint: { "text-color": "#0f2744", "text-halo-color": OC_BG, "text-halo-width": 1.7 },
+  },
+  {
+    id: "place-labels",
+    type: "symbol",
+    source: "basemap",
+    "source-layer": "places",
+    minzoom: 7,
+    layout: {
+      "text-field": ["coalesce", ["get", "name:pl"], ["get", "name"], ["get", "name:en"]],
+      "text-font": ["Noto Sans Medium"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 8, 12, 14, 16],
+    },
+    paint: { "text-color": "#0f2744", "text-halo-color": OC_BG, "text-halo-width": 1.8 },
+  },
+];
+
+function addPointLayers(map: Map, iconsOk: boolean) {
+  map.addSource("points", {
+    type: "geojson",
+    data: { type: "FeatureCollection", features: [] },
+    cluster: true,
+    clusterMaxZoom: 10,
+    clusterRadius: 42,
+  });
+  map.addLayer({
+    id: "clusters",
+    type: "circle",
+    source: "points",
+    filter: ["has", "point_count"],
+    paint: {
+      "circle-color": OC_NAVY,
+      "circle-radius": ["step", ["get", "point_count"], 16, 10, 20, 50, 26],
+      "circle-opacity": 0.92,
+      "circle-stroke-width": 2,
+      "circle-stroke-color": "#e8eef4",
+    },
+  });
+  map.addLayer({
+    id: "cluster-count",
+    type: "symbol",
+    source: "points",
+    filter: ["has", "point_count"],
+    layout: {
+      "text-field": ["get", "point_count_abbreviated"],
+      "text-font": ["Noto Sans Medium"],
+      "text-size": 12,
+      "text-allow-overlap": true,
+    },
+    paint: { "text-color": "#e8eef4" },
+  });
+  map.addLayer({
+    id: "unclustered-hit",
+    type: "circle",
+    source: "points",
+    filter: ["!", ["has", "point_count"]],
+    paint: {
+      "circle-radius": 22,
+      "circle-color": "#000",
+      "circle-opacity": 0,
+      "circle-stroke-width": 0,
+    },
+  });
+  if (iconsOk) {
+    map.addLayer({
+      id: "unclustered",
+      type: "symbol",
+      source: "points",
+      filter: ["!", ["has", "point_count"]],
+      layout: {
+        "icon-image": [
+          "match",
+          ["get", "readiness"],
+          "pending",
+          ["concat", "cat-", ["get", "category"], "-pending"],
+          "stale",
+          ["concat", "cat-", ["get", "category"], "-stale"],
+          "ok",
+          ["concat", "cat-", ["get", "category"], "-ok"],
+          ["concat", "cat-", ["get", "category"]],
+        ],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.85, 14, 1],
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "icon-anchor": "center",
+        "icon-padding": 0,
+      },
+      paint: {
+        "icon-opacity": ["case", ["==", ["get", "pending"], 1], 0.5, 1],
+      },
+    });
+  } else {
+    map.addLayer({
+      id: "unclustered",
+      type: "circle",
+      source: "points",
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-color": ["get", "color"],
+        "circle-opacity": ["case", ["==", ["get", "pending"], 1], 0.32, 0.92],
+        "circle-radius": ["case", ["==", ["get", "pending"], 1], 8, 9],
+        "circle-stroke-width": ["case", ["==", ["get", "pending"], 1], 2.6, ["==", ["get", "stale"], 1], 3, 1.5],
+        "circle-stroke-color": ["case", ["==", ["get", "pending"], 1], OC_NAVY, ["==", ["get", "stale"], 1], "#c2410c", "#fff"],
+      },
+    });
+  }
 }
 
 export function MapView({ points, cats, services, pickMode, onPick, onTilesMissing, intervalDays = 14 }: Props) {
@@ -122,15 +305,18 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
       maplibregl.addProtocol("pmtiles", protocol.tile);
       let style: maplibregl.StyleSpecification = {
         version: 8,
+        glyphs: GLYPHS,
         sources: {},
-        layers: [{ id: "bg", type: "background", paint: { "background-color": "#e8e4dc" } }],
+        layers: [{ id: "bg", type: "background", paint: { "background-color": OC_BG } }],
       };
       let missing = true;
       let onlineFallback = false;
       try {
         const idx = await fetch("/tiles/index.json").then((r) => (r.ok ? r.json() : { files: [] }));
         const files: string[] = idx.files || [];
-        const file = files.find((f: string) => f.endsWith(".pmtiles")) || (await fetch("/tiles/poland.pmtiles", { method: "HEAD" }).then((r) => (r.ok ? "poland.pmtiles" : "")));
+        const file =
+          files.find((f: string) => f.endsWith(".pmtiles")) ||
+          (await fetch("/tiles/poland.pmtiles", { method: "HEAD" }).then((r) => (r.ok ? "poland.pmtiles" : "")));
         if (file) {
           missing = false;
           const origin = window.location.origin;
@@ -138,18 +324,11 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
           const local = await fetch("/style.json").then((r) => (r.ok ? r.json() : null));
           style = local || {
             version: 8,
+            glyphs: GLYPHS,
             sources: { basemap: { type: "vector", url: pmtilesUrl } },
-            layers: [
-              { id: "bg", type: "background", paint: { "background-color": "#e4dfd4" } },
-              { id: "earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e4dfd4" } },
-              { id: "landcover", type: "fill", source: "basemap", "source-layer": "landcover", paint: { "fill-color": "#d3e0c6", "fill-opacity": 0.55 } },
-              { id: "landuse", type: "fill", source: "basemap", "source-layer": "landuse", paint: { "fill-color": "#d8c9b0", "fill-opacity": 0.35 } },
-              { id: "water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#9ec3de" } },
-              { id: "buildings", type: "fill", source: "basemap", "source-layer": "buildings", paint: { "fill-color": "#cfc6b8", "fill-opacity": 0.75 } },
-              { id: "roads-casing", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#c2b8aa", "line-width": 2.2 } },
-              { id: "roads", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#f7f3ec", "line-width": 1.2 } },
-            ],
+            layers: FALLBACK_LAYERS,
           };
+          if (!style.glyphs) style.glyphs = GLYPHS;
           if (!style.sources) style.sources = {};
           style.sources.basemap = { type: "vector", url: pmtilesUrl };
         }
@@ -158,6 +337,7 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
       }
       if (missing && navigator.onLine) {
         onlineFallback = true;
+        style.glyphs = GLYPHS;
         style.sources = {
           osm: {
             type: "raster",
@@ -167,7 +347,7 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
           },
         };
         style.layers = [
-          { id: "bg", type: "background", paint: { "background-color": "#e8e4dc" } },
+          { id: "bg", type: "background", paint: { "background-color": OC_BG } },
           { id: "osm", type: "raster", source: "osm" },
         ];
       }
@@ -182,77 +362,46 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
         attributionControl: { compact: true },
       });
       if (pickMode) {
-        map.setPadding(
-          wide ? { top: 12, bottom: 12, left: 12, right: 400 } : { top: 8, bottom: 300, left: 8, right: 8 }
-        );
+        map.setPadding(wide ? { top: 12, bottom: 12, left: 12, right: 400 } : { top: 8, bottom: 300, left: 8, right: 8 });
       }
       if (cancelled) {
         map.remove();
         return;
       }
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
-      map.on("load", () => {
-        map.addSource("points", {
-          type: "geojson",
-          data: dataRef.current,
-          cluster: true,
-          clusterMaxZoom: 10,
-          clusterRadius: 42,
-        });
-        map.addLayer({
-          id: "clusters",
-          type: "circle",
-          source: "points",
-          filter: ["has", "point_count"],
-          paint: {
-            "circle-color": "#1a1714",
-            "circle-radius": ["step", ["get", "point_count"], 16, 10, 20, 50, 26],
-            "circle-opacity": 0.85,
-          },
-        });
-        map.addLayer({
-          id: "unclustered",
-          type: "circle",
-          source: "points",
-          filter: ["!", ["has", "point_count"]],
-          paint: {
-            "circle-color": ["get", "color"],
-            "circle-opacity": ["case", ["==", ["get", "pending"], 1], 0.32, 0.92],
-            "circle-radius": ["case", ["==", ["get", "pending"], 1], 8, 9],
-            "circle-stroke-width": [
-              "case",
-              ["==", ["get", "pending"], 1],
-              2.6,
-              ["==", ["get", "stale"], true],
-              3,
-              1.5,
-            ],
-            "circle-stroke-color": [
-              "case",
-              ["==", ["get", "pending"], 1],
-              "#1a1714",
-              ["==", ["get", "stale"], true],
-              "#c2410c",
-              "#fff",
-            ],
-          },
-        });
-      });
-      map.on("click", "unclustered", (e) => {
+      const openPopup = (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f || pickMode) return;
         const html = popupHtml(f.properties as Record<string, unknown>);
         new maplibregl.Popup({ maxWidth: "280px" }).setLngLat(e.lngLat).setHTML(html).addTo(map);
-      });
-      map.on("click", "clusters", (e) => {
-        const f = e.features?.[0];
-        const src = map.getSource("points") as GeoJSONSource;
-        const id = f?.properties?.cluster_id;
-        if (id == null) return;
-        src.getClusterExpansionZoom(id).then((zoom) => {
-          if (zoom == null || !f) return;
-          map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });
-        });
+      };
+      map.on("load", () => {
+        void (async () => {
+          if (cancelled) return;
+          const iconsOk = await addCategoryImagesToMap(map);
+          if (cancelled || !map.getStyle()) return;
+          addPointLayers(map, iconsOk);
+          const src = map.getSource("points") as GeoJSONSource | undefined;
+          src?.setData(dataRef.current);
+          map.on("click", "unclustered", openPopup);
+          map.on("click", "unclustered-hit", openPopup);
+          map.on("mouseenter", "unclustered", () => {
+            map.getCanvas().style.cursor = pickMode ? "crosshair" : "pointer";
+          });
+          map.on("mouseleave", "unclustered", () => {
+            map.getCanvas().style.cursor = "";
+          });
+          map.on("click", "clusters", (e) => {
+            const f = e.features?.[0];
+            const clusterSrc = map.getSource("points") as GeoJSONSource;
+            const id = f?.properties?.cluster_id;
+            if (id == null) return;
+            clusterSrc.getClusterExpansionZoom(id).then((zoom) => {
+              if (zoom == null || !f) return;
+              map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });
+            });
+          });
+        })();
       });
       map.on("click", (e) => {
         if (pickMode && onPick) onPick(e.lngLat.lat, e.lngLat.lng);

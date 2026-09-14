@@ -7,14 +7,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icons/*.png", "style.json", "sprites/*.svg"],
+      includeAssets: ["icons/*.png", "icons/map/*.svg", "style.json", "glyphs/**/*.pbf"],
       manifest: {
         name: "Mapa Kryzysowa",
         short_name: "Mapa",
         lang: "pl",
         display: "standalone",
-        theme_color: "#d7263d",
-        background_color: "#f4f1ea",
+        theme_color: "#1e3a5f",
+        background_color: "#e8eef4",
         start_url: "/",
         scope: "/",
         icons: [
@@ -25,7 +25,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,json,ico,woff2}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,json,ico,woff2,pbf}"],
         navigateFallback: "/index.html",
         runtimeCaching: [
           {

@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { t } from "../i18n";
 import { currentUser, isOfflineError, pb, pbErrorMessage } from "../lib/pb";
 import { queueAll, queueRemove, type QueuedItem } from "../lib/queue";
-import { CATEGORY_COLORS, type Point } from "../types";
+import type { Point } from "../types";
+import { CategoryBadge } from "../components/CategoryBadge";
 
 export function MyPointsPage() {
   const nav = useNavigate();
@@ -69,9 +70,7 @@ export function MyPointsPage() {
       {!items.length ? <p>{t("empty.moje")}</p> : null}
       {items.map((p) => (
         <article key={p.id} className="card">
-          <span className="cat-badge" style={{ background: CATEGORY_COLORS[p.category] }}>
-            {t("cat." + p.category)}
-          </span>
+          <CategoryBadge category={p.category} />
           <h2>{p.title}</h2>
           <p>
             {t("cat." + p.category)} · {t("status." + p.status)}

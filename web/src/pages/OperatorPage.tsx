@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { t } from "../i18n";
 import { currentUser, isOperator, pb } from "../lib/pb";
 import { freshnessLabel, isPresentDate } from "../lib/format";
-import { CATEGORY_COLORS, type Point } from "../types";
+import type { Point } from "../types";
+import { CategoryBadge } from "../components/CategoryBadge";
 
 type Tab = "kolejka" | "potwierdzenia" | "potrzeby" | "bledy";
 
@@ -128,7 +129,8 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
   }
 
   return (
-    <div className="page">
+    <div className="page ops-page">
+      <p className="ops-kicker">Obrona cywilna</p>
       <h1>{t("nav.operator")}</h1>
       <p className="page-links">
         <Link to="/status">{t("nav.status")}</Link>
@@ -165,9 +167,7 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
         (pending.length ? (
           pending.map((p) => (
             <article key={p.id} className="card">
-              <span className="cat-badge" style={{ background: CATEGORY_COLORS[p.category] }}>
-                {t("cat." + p.category)}
-              </span>
+              <CategoryBadge category={p.category} />
               <h2>{p.title}</h2>
               <p>{p.address || `${p.lat}, ${p.lon}`}</p>
               {p.reporter_role === "zaufany" ? <p className="fresh">{t("op.zaufany")}</p> : null}

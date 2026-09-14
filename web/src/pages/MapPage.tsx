@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FilterChips } from "../components/FilterChips";
+import { Legend } from "../components/Legend";
 import { MapView } from "../components/MapView";
 import { t } from "../i18n";
 import { currentUser, isOperator, pb } from "../lib/pb";
@@ -146,6 +147,7 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
           </div>
         ) : null}
         <FilterChips cats={cats} services={services} onToggleCat={toggleCat} onToggleSvc={toggleSvc} />
+        <Legend />
         {pendingMine ? <p className="map-hint">{t("map.oczekujeHint")}</p> : null}
       </div>
       {tileWarn ? (
