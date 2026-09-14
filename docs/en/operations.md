@@ -79,11 +79,13 @@ PMTiles file into `./tiles`. The download runs through the `tiles-agent` contain
 Sizes: a municipality at zoom 14 is tens of megabytes, and that is the recommended choice for a fire
 brigade. All of Poland at high zoom is gigabytes.
 
-With no internet: upload a PMTiles file from a USB stick. The filename is free-form — the app reads
-`/tiles/index.json` and takes coverage from the file header.
+With no internet: upload a PMTiles file from a USB stick. The filename is free-form (`slask-z13.pmtiles`,
+a municipality, anything) — the app reads `/tiles/index.json` and takes coverage from the file header.
+`style.json` does not assume `poland.pmtiles`.
 
 Outside the file's area the map says so explicitly instead of showing an empty screen. Above the
-file's maximum zoom, existing tiles are scaled up, so streets remain visible.
+file's maximum zoom, existing tiles are scaled up, so streets remain visible
+(on a node with `slask-z13.pmtiles` the dense grid stops at z13).
 
 ## AED
 
@@ -122,7 +124,7 @@ is honoured in development mode only, and the remote file must support CORS and 
 
 ## Traps when changing the map style
 
-Three things that have taken the map down in production before:
+Four things that have taken the map down in production before:
 
 1. **A font outside the glyph directory.** `web/public/glyphs` holds `Noto Sans Regular` and nothing
    else. A request for any other font is answered with `index.html` from the SPA fallback, MapLibre
@@ -132,6 +134,9 @@ Three things that have taken the map down in production before:
    precache. A `CacheFirst` strategy breaks range requests and the streets disappear.
 3. **`background-color` on a `fill` layer.** MapLibre then treats the entire style as invalid and
    draws nothing. Only a `background` layer may carry a background colour.
+4. **Road filters without `medium_road`.** Protomaps tags ordinary city streets as `medium_road`.
+   The `roads` / `roads-casing` / `road-labels` layers must paint that `kind`, or at z12–z13 only
+   the main corridors remain.
 
 The palette and icons are described in [../ui-oc.md](../ui-oc.md) (Polish).
 

@@ -2,8 +2,9 @@ import { PMTiles, type Protocol } from "pmtiles";
 
 /**
  * Kafelki offline: na węźle może leżeć dowolny plik *.pmtiles (np. slask-z13.pmtiles).
- * Prawda jest w /tiles/index.json (generowany na węźle). style.json ma na sztywno
- * poland.pmtiles tylko jako placeholder — nazwa jest zawsze nadpisywana tym, co tu znajdziemy.
+ * Prawda jest w /tiles/index.json (generowany na węźle). style.json ma placeholder
+ * local.pmtiles — nazwa jest zawsze nadpisywana tym, co tu znajdziemy. Nie traktuj
+ * braku poland.pmtiles jako braku mapy, gdy index wymienia inny plik.
  */
 const KNOWN_FILES = ["slask-z13.pmtiles", "poland.pmtiles"];
 

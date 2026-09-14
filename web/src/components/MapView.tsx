@@ -35,6 +35,33 @@ const BYTOM: [number, number] = [18.923, 50.348];
 const GLYPHS = GLYPH_URL;
 const OC_BG = "#e8eef4";
 const OC_NAVY = "#1e3a5f";
+const OC_INK = "#0a1e36";
+const OC_PAPER = "#f4f7fa";
+const OC_WATER = "#2f6a96";
+const ROAD_KINDS = ["highway", "major_road", "medium_road", "minor_road"] as const;
+const ROAD_SORT = ["match", ["get", "kind"], "highway", 4, "major_road", 3, "medium_road", 2, 1] as maplibregl.ExpressionSpecification;
+const ROAD_CASING_W = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  8,
+  ["match", ["get", "kind"], "highway", 2.4, "major_road", 1.8, "medium_road", 1.3, 1.1],
+  12,
+  ["match", ["get", "kind"], "highway", 7.4, "major_road", 6.0, "medium_road", 5.0, 4.4],
+  13,
+  ["match", ["get", "kind"], "highway", 10.5, "major_road", 8.4, "medium_road", 7.0, 6.2],
+] as maplibregl.ExpressionSpecification;
+const ROAD_FILL_W = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  8,
+  ["match", ["get", "kind"], "highway", 1.5, "major_road", 1.0, "medium_road", 0.6, 0.5],
+  12,
+  ["match", ["get", "kind"], "highway", 5.2, "major_road", 4.0, "medium_road", 3.2, 2.8],
+  13,
+  ["match", ["get", "kind"], "highway", 7.6, "major_road", 6.0, "medium_road", 4.8, 4.2],
+] as maplibregl.ExpressionSpecification;
 
 type Props = {
   points: Point[];
@@ -157,48 +184,60 @@ function escapeHtml(s: string) {
 }
 
 const FALLBACK_LAYERS: maplibregl.LayerSpecification[] = [
-  { id: "bg", type: "background", paint: { "background-color": OC_BG } },
-  { id: "earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e6edf4" } },
+  { id: "bg", type: "background", paint: { "background-color": "#d7dee6" } },
+  { id: "earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#d9e0e8" } },
   {
     id: "landcover",
     type: "fill",
     source: "basemap",
     "source-layer": "landcover",
-    paint: { "fill-color": "#c5d3c9", "fill-opacity": 0.5 },
+    paint: { "fill-color": "#b8c2cc", "fill-opacity": 0.62 },
   },
   {
     id: "landuse",
     type: "fill",
     source: "basemap",
     "source-layer": "landuse",
-    paint: { "fill-color": "#d5dce4", "fill-opacity": 0.35 },
+    paint: { "fill-color": "#c0c8d0", "fill-opacity": 0.48 },
   },
-  { id: "water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#5b8fb8" } },
+  { id: "water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": OC_WATER } },
   {
     id: "buildings",
     type: "fill",
     source: "basemap",
     "source-layer": "buildings",
-    paint: { "fill-color": "#b8c4d0", "fill-opacity": 0.82 },
+    minzoom: 12,
+    paint: { "fill-color": "#8e9caa", "fill-opacity": 0.88, "fill-outline-color": "#5c6b7a" },
+  },
+  {
+    id: "roads-path",
+    type: "line",
+    source: "basemap",
+    "source-layer": "roads",
+    filter: ["in", ["get", "kind"], ["literal", ["path", "other"]]],
+    minzoom: 12,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "#3d4f63", "line-width": 1.8, "line-dasharray": [2, 1.4] },
   },
   {
     id: "roads-casing",
     type: "line",
     source: "basemap",
     "source-layer": "roads",
-    paint: {
-      "line-color": OC_NAVY,
-      "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1.4, 11, 2.8, 14, 6.4],
-    },
+    filter: ["in", ["get", "kind"], ["literal", [...ROAD_KINDS]]],
+    layout: { "line-cap": "round", "line-join": "round", "line-sort-key": ROAD_SORT },
+    paint: { "line-color": OC_INK, "line-width": ROAD_CASING_W },
   },
   {
     id: "roads",
     type: "line",
     source: "basemap",
     "source-layer": "roads",
+    filter: ["in", ["get", "kind"], ["literal", [...ROAD_KINDS]]],
+    layout: { "line-cap": "round", "line-join": "round", "line-sort-key": ROAD_SORT },
     paint: {
-      "line-color": "#ffffff",
-      "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.7, 11, 1.7, 14, 4.6],
+      "line-color": ["match", ["get", "kind"], "highway", "#f2b632", "major_road", "#ffe08a", "medium_road", "#fff4c8", "#f7fafc"],
+      "line-width": ROAD_FILL_W,
     },
   },
   {
@@ -207,13 +246,14 @@ const FALLBACK_LAYERS: maplibregl.LayerSpecification[] = [
     source: "basemap",
     "source-layer": "roads",
     minzoom: 11,
+    filter: ["in", ["get", "kind"], ["literal", [...ROAD_KINDS]]],
     layout: {
       "symbol-placement": "line",
       "text-field": ["coalesce", ["get", "name:pl"], ["get", "name"], ["get", "name:en"]],
-      "text-font": ["Noto Sans Regular"],
-      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 11, 14, 13.5],
+      "text-font": [GLYPH_FONT],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 12, 13, 14],
     },
-    paint: { "text-color": "#0f2744", "text-halo-color": OC_BG, "text-halo-width": 1.7 },
+    paint: { "text-color": OC_INK, "text-halo-color": OC_PAPER, "text-halo-width": 2.4 },
   },
   {
     id: "place-labels",
@@ -226,7 +266,7 @@ const FALLBACK_LAYERS: maplibregl.LayerSpecification[] = [
       "text-font": [GLYPH_FONT],
       "text-size": ["interpolate", ["linear"], ["zoom"], 8, 12, 14, 16],
     },
-    paint: { "text-color": "#0f2744", "text-halo-color": OC_BG, "text-halo-width": 1.8 },
+    paint: { "text-color": OC_INK, "text-halo-color": OC_PAPER, "text-halo-width": 2.4 },
   },
 ];
 
@@ -579,7 +619,7 @@ export function MapView({
             layers: FALLBACK_LAYERS,
           };
           if (!style.sources) style.sources = {};
-          // style.json ma placeholder poland.pmtiles — zawsze nadpisujemy tym, co realnie leży w /tiles.
+          // style.json ma placeholder local.pmtiles — zawsze nadpisujemy tym, co realnie leży w /tiles.
           // Bez własnych `bounds`: bbox i maxzoom bierzemy z nagłówka PMTiles (poza nim MapLibre nie prosi o kafelki,
           // powyżej maxzoom robi overzoom — ulice zostają).
           style.sources.basemap = { type: "vector", url: pmtilesUrl };
