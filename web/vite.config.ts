@@ -46,13 +46,9 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /\/tiles\/.*\.pmtiles/,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "pmtiles",
-              expiration: { maxEntries: 8, maxAgeSeconds: 30 * 86400 },
-              rangeRequests: true,
-            },
+            // Range requests + SW CacheFirst break PMTiles byte-range fetches.
+            urlPattern: /\/tiles\/.*/,
+            handler: "NetworkOnly",
           },
           {
             urlPattern: /\/api\/status$/,
