@@ -135,6 +135,44 @@ Three things that have taken the map down in production before:
 
 The palette and icons are described in [../ui-oc.md](../ui-oc.md) (Polish).
 
+## Welcome portal and access point
+
+To see the map, a resident has to reach the node's address. In a crisis they will not, if they have
+to know it by heart. Two pieces solve that.
+
+**Welcome portal.** Phones fetch well-known URLs after joining a network to check whether there is
+internet. When the node answers with a redirect instead of the expected content, the system opens a
+window with the map by itself. One variable enables it:
+
+```
+PORTAL_URL=http://192.168.4.1/
+```
+
+Caddy then intercepts the probe URLs used by Android, iOS, Windows and Firefox and redirects to that
+address. An empty `PORTAL_URL` disables the mechanism, so an ordinary deployment on a municipal
+network intercepts nothing.
+
+This only works when those probe hostnames resolve to the node. On a municipal network with its own
+DNS that has to be configured there. On your own access point `dnsmasq` does it.
+
+**Access point.** The script prepares a configuration for a Raspberry Pi with Wi-Fi:
+
+```bash
+scripts/hotspot.sh              # preview, installs nothing
+sudo scripts/hotspot.sh --wlacz # install and start the services
+```
+
+You get an open `MAPA-KRYZYSOWA` network, DHCP, and DNS pointing every name at the node. The network
+deliberately provides no internet: it leads to the map and nowhere else. There is no password,
+because nobody will type a key from a piece of paper during a crisis, and the map needs no login to
+be read.
+
+With `TLS_MODE=internal` the portal window will warn about the certificate. For the portal itself it
+is simpler to keep an `http` address.
+
+**This cannot be verified in CI.** An access point needs hardware with a Wi-Fi card. Review the
+generated files before enabling them, and check with a phone before calling it done.
+
 ## Backups
 
 ```bash

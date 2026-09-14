@@ -27,6 +27,10 @@
     reverse_proxy {$PB_UPSTREAM}
   }
 
+  # Portal powitalny: telefon sam otwiera mapę po wejściu w sieć węzła.
+  # Plik tworzy entrypoint.sh — pusty, gdy PORTAL_URL nie jest ustawione.
+  import /etc/caddy/portal.conf
+
   handle {
     root * /srv
     try_files {path} /index.html

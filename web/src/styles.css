@@ -830,3 +830,49 @@ a { color: var(--navy); }
   .oc-scale.print-keep { display: flex !important; }
 }
 .print-map .oc-locate-stack, .print-map .geo-toast, .print-map .maplibregl-ctrl-bottom-left { display: none !important; }
+
+/* Obchód: ta sama lista na ekranie i na papierze. */
+.patrol-sub { margin: 0 0 6px; font-weight: 700; color: var(--muted); }
+.patrol-list { list-style: none; padding: 0; margin: 10px 0 0; }
+.patrol-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.patrol-row.stale { border-left: 4px solid #c2410c; padding-left: 8px; }
+.patrol-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.patrol-meta { font-size: 12px; color: var(--muted); }
+.patrol-check { display: none; }
+.patrol-sign { display: none; }
+.patrol-foot { margin-top: 14px; font-size: 12px; color: var(--muted); }
+
+/* Telefon: przycisk pod treścią, na pełną szerokość — obchód robi się w rękawicach. */
+@media (max-width: 560px) {
+  .patrol-row { flex-wrap: wrap; }
+  .patrol-row > .btn { width: 100%; min-height: 48px; margin-top: 6px; }
+}
+
+@media print {
+  .patrol-page .btn, .patrol-page .ops-kicker { display: none !important; }
+  .patrol-row { break-inside: avoid; padding: 6px 0; }
+  .patrol-row.stale { border-left: 0; padding-left: 0; }
+  /* Kratka na odhaczenie i miejsce na datę oraz podpis sprawdzającego. */
+  .patrol-check {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid #000;
+    flex: 0 0 auto;
+    margin-top: 2px;
+  }
+  .patrol-sign {
+    display: block;
+    width: 42mm;
+    border-bottom: 1px solid #000;
+    align-self: flex-end;
+    flex: 0 0 auto;
+  }
+  @page { size: A4; margin: 14mm; }
+}
