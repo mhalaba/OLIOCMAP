@@ -79,11 +79,13 @@ plik PMTiles w `./tiles`. Pobieranie idzie przez kontener `tiles-agent` na sieci
 Rozmiary: gmina przy z14 to dziesiątki megabajtów i to jest zalecany wybór dla OSP.
 Polska przy wysokim przybliżeniu to gigabajty.
 
-Bez internetu: **Wgraj plik PMTiles** z pendrive'a. Nazwa pliku jest dowolna — aplikacja czyta
-`/tiles/index.json`, a zasięg bierze z nagłówka pliku.
+Bez internetu: **Wgraj plik PMTiles** z pendrive'a. Nazwa pliku jest dowolna (`slask-z13.pmtiles`,
+gmina, cokolwiek) — aplikacja czyta `/tiles/index.json`, a zasięg bierze z nagłówka pliku.
+`style.json` nie zakłada `poland.pmtiles`.
 
 Poza obszarem pliku mapa pokazuje komunikat „Poza zasięgiem mapy offline”, a nie pustkę.
-Powyżej maksymalnego przybliżenia działa powiększanie istniejących kafelków, więc ulice zostają.
+Powyżej maksymalnego przybliżenia działa powiększanie istniejących kafelków, więc ulice zostają
+(na węźle ze `slask-z13.pmtiles` gęsta siatka kończy się na z13).
 
 ## AED
 
@@ -123,7 +125,7 @@ zakresowe.
 
 ## Pułapki przy zmianie stylu mapy
 
-Trzy rzeczy, które już raz położyły mapę na produkcji:
+Cztery rzeczy, które już raz położyły mapę na produkcji:
 
 1. **Czcionka spoza katalogu glifów.** W `web/public/glyphs` leży wyłącznie `Noto Sans Regular`.
    Prośba o inny krój dostaje w odpowiedzi `index.html` z SPA-fallbacku, a MapLibre zgłasza
@@ -133,6 +135,9 @@ Trzy rzeczy, które już raz położyły mapę na produkcji:
    precache. Strategia typu `CacheFirst` psuje żądania zakresowe i ulice znikają.
 3. **`background-color` na warstwie `fill`.** MapLibre uznaje wtedy cały styl za niepoprawny
    i nie rysuje nic. Tła używa wyłącznie warstwa typu `background`.
+4. **Filtrowanie dróg bez `medium_road`.** Protomaps oznacza typowe ulice miejskie jako
+   `medium_road`. Warstwy `roads` / `roads-casing` / `road-labels` muszą ten `kind` malować,
+   inaczej na z12–z13 zostają tylko główne ciągi.
 
 Paletę i ikony opisuje [ui-oc.md](ui-oc.md).
 

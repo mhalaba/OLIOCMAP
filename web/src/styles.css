@@ -732,24 +732,44 @@ a { color: var(--navy); }
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
-  padding: 4px 6px;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 6px 8px;
   border-radius: 8px;
-  background: rgba(244, 247, 250, 0.9);
+  background: rgba(244, 247, 250, 0.92);
   color: var(--navy-ink);
   font: 700 12px/1.2 var(--font);
   pointer-events: none;
 }
+.oc-scale-ruler { position: relative; min-width: 48px; }
 .oc-scale-bar {
-  box-sizing: content-box;
-  height: 8px;
+  box-sizing: border-box;
+  height: 10px;
   border: 2px solid var(--navy-ink);
   border-top: 0;
-  padding: 0 0 2px;
-  text-align: center;
+  background: transparent;
+}
+.oc-scale-ticks { position: absolute; inset: 0; pointer-events: none; }
+.oc-scale-tick {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  border-left: 2px solid var(--navy-ink);
+  height: 16px;
+  padding-top: 16px;
+  font: 700 10px/1 var(--font);
+  color: var(--navy-ink);
   white-space: nowrap;
 }
-.oc-scale-dist { display: block; margin-top: -14px; }
+.oc-scale-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 8px;
+  max-width: 220px;
+}
+.oc-scale-dist { font-weight: 800; }
 .oc-scale-walk { font-weight: 600; color: var(--muted); white-space: nowrap; }
 
 /* Widok poza bbox pliku PMTiles — informacja, nie alarm. */

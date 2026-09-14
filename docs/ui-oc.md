@@ -6,14 +6,19 @@ Instrukcja podmiany znaczników i palety podkładki. **Nie** dokładaj CDN-ów c
 
 Plik: `web/public/style.json`. Fallback tych samych kolorów jest w `web/src/components/MapView.tsx` (`FALLBACK_LAYERS`), gdy brak `style.json`.
 
+URL źródła w `style.json` (`pmtiles:///tiles/local.pmtiles`) jest **placeholdere**. `MapView` zawsze nadpisuje go plikiem z `/tiles/index.json` (na produkcji często `slask-z13.pmtiles`, maxzoom 13). Brak `poland.pmtiles` nie oznacza braku mapy.
+
+Warstwy dróg malują Protomaps `kind`: `highway`, `major_road`, **`medium_road`**, `minor_road`. Bez `medium_road` znikają typowe ulice w mieście. Kontrast i grubość są strojone pod z12–z13 (telefon, słońce). Poza bbox pliku albo powyżej maxzoom nie ma gęstszej siatki — overzoom zostawia to, co jest.
+
 | Element | Kolor |
 | --- | --- |
-| tło / ziemia | `#e8eef4` / `#e6edf4` |
-| woda | `#5b8fb8` |
-| budynki | `#b8c4d0` |
-| obwódka dróg | `#1e3a5f` |
-| wypełnienie dróg | `#ffffff` |
-| etykiety | `#0f2744` + halo `#e8eef4` |
+| tło / ziemia | `#d7dee6` / `#d9e0e8` |
+| woda | `#2f6a96` |
+| budynki | `#8e9caa` |
+| obwódka dróg | `#0a1e36` |
+| wypełnienie autostrad | `#f2b632` |
+| wypełnienie głównych / średnich / lokalnych | `#ffe08a` / `#fff4c8` / `#f7fafc` |
+| etykiety | `#0a1e36` + halo `#f4f7fa` |
 
 Glify (tylko Noto Sans Regular — inne kroje są mapowane na Regular przez `lib/glyphs.ts`) leżą lokalnie w `web/public/glyphs/{fontstack}/{range}.pbf`. URL w stylu:
 
@@ -21,7 +26,11 @@ Glify (tylko Noto Sans Regular — inne kroje są mapowane na Regular przez `lib
 "glyphs": "/glyphs/{fontstack}/{range}.pbf"
 ```
 
-Warstwy `road-labels` i `place-labels` muszą zostać. Po zmianie kolorów sprawdź kontrast na z11–z14 (remiza, jasny monitor).
+Warstwy `road-labels` i `place-labels` muszą zostać. Po zmianie kolorów sprawdź kontrast na z12–z13 (remiza, jasny monitor). Nie wpisuj `Noto Sans Medium` — na węźle go nie ma.
+
+## Skala
+
+`WalkScaleControl` (`web/src/lib/walkScale.ts`): pasek metryczny (m/km) oraz czas pieszo przy ~5 km/h, z kreskami 5 min / 15 min gdy mieszczą się na pasku. Polski `aria-label`. Aktualizuje się przy zoomie.
 
 ## Znaczniki kategorii
 
