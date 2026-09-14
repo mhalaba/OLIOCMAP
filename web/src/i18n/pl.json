@@ -52,7 +52,14 @@
     "przytrzymaj": "Przytrzymaj palec na mapie, żeby zgłosić punkt w tym miejscu.",
     "zweryfikowal": "Zweryfikował",
     "potwierdzil": "Potwierdził",
-    "nowyPunktTu": "Zgłoś punkt w tym miejscu"
+    "nowyPunktTu": "Zgłoś punkt w tym miejscu",
+    "znajdzMnie": "pokaż, gdzie jestem",
+    "ulica": "ulica na mapie",
+    "miejscowosc": "miejscowość na mapie",
+    "szukajPodpowiedz": "Szukaj punktu, ulicy albo dzielnicy. Nazwy ulic pochodzą z pobranej mapy, więc obejmują obszar, który już się wczytał.",
+    "pinezka": "Pinezka",
+    "pinezkaUstaw": "Przesuń mapę, żeby ustawić pinezkę",
+    "pinezkaZglos": "Zgłoś tutaj"
   },
   "freshness": {
     "potwierdzony": "Potwierdzony {n} {unit} temu",

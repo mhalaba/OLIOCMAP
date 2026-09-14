@@ -50,8 +50,14 @@ bez prądu), „na ile godzin starcza autonomii” i „kiedy ktoś ostatnio to 
 **Potrzeby sąsiadów.** Zgłoszenie potrzeby (leki, woda, ewakuacja) trafia do zaufanych i OSP, nigdy na
 mapę publiczną i nigdy poza węzeł. Kto może pomóc, klika „Biorę to”, a inni widzą, że sprawa jest zajęta.
 
-**Zgłoszenie w kilkanaście sekund.** Przytrzymanie palca na mapie otwiera formularz w tym miejscu.
-Konto jest potrzebne dopiero przy zapisie, a wpisana treść czeka na czas logowania.
+**Zgłoszenie w kilkanaście sekund.** Przycisk **Pinezka** włącza celownik: przesuwasz mapę, widzisz
+współrzędne i klikasz **Zgłoś tutaj**. To samo robi przytrzymanie palca na mapie. Konto jest potrzebne
+dopiero przy zapisie, a wpisana treść czeka na czas logowania.
+
+**Szukanie bez internetu.** Jedno pole szuka naraz w punktach (nazwa, adres, kategoria) oraz w nazwach
+ulic i miejscowości wziętych z pobranej mapy. Nie ma geokodera, więc nic nie wychodzi do sieci i nic
+nie przestaje działać po odcięciu łącza. Numerów domów podkład nie zawiera, a ulice obejmują obszar,
+który zdążył się wczytać. W tej samej liście jest **Moja lokalizacja**, żeby zobaczyć, gdzie się stoi.
 
 **Tryb offline na telefonie.** Po jednej wizycie aplikacja działa bez sieci, a zgłoszenie wysłane
 bez łączności czeka w telefonie i idzie do węzła po powrocie zasięgu.
