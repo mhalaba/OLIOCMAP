@@ -110,7 +110,10 @@ export class WalkScaleControl implements IControl {
       const mark = document.createElement("span");
       mark.className = "oc-scale-tick";
       mark.style.left = `${Math.round(ratio * 100)}%`;
-      mark.textContent = mins === 5 ? t("map.pieszo5") : t("map.pieszo15");
+      const lbl = document.createElement("span");
+      lbl.className = "oc-scale-tick-lbl";
+      lbl.textContent = mins === 5 ? t("map.pieszo5") : t("map.pieszo15");
+      mark.append(lbl);
       this.ticks.append(mark);
     }
   }

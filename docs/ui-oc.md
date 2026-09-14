@@ -6,7 +6,7 @@ Instrukcja podmiany znaczników i palety podkładki. **Nie** dokładaj CDN-ów c
 
 Plik: `web/public/style.json`. Fallback tych samych kolorów jest w `web/src/components/MapView.tsx` (`FALLBACK_LAYERS`), gdy brak `style.json`.
 
-URL źródła w `style.json` (`pmtiles:///tiles/local.pmtiles`) jest **placeholdere**. `MapView` zawsze nadpisuje go plikiem z `/tiles/index.json` (na produkcji często `slask-z13.pmtiles`, maxzoom 13). Brak `poland.pmtiles` nie oznacza braku mapy.
+URL źródła w `style.json` (`pmtiles:///tiles/local.pmtiles`) jest **placeholderem**. `MapView` zawsze nadpisuje go plikiem z `/tiles/index.json` (na produkcji często `slask-z13.pmtiles`, maxzoom 13). Brak `poland.pmtiles` nie oznacza braku mapy.
 
 Warstwy dróg malują Protomaps `kind`: `highway`, `major_road`, **`medium_road`**, `minor_road`. Bez `medium_road` znikają typowe ulice w mieście. Kontrast i grubość są strojone pod z12–z13 (telefon, słońce). Poza bbox pliku albo powyżej maxzoom nie ma gęstszej siatki — overzoom zostawia to, co jest.
 

@@ -735,17 +735,21 @@ a { color: var(--navy); }
   justify-content: center;
   gap: 4px;
   min-height: 44px;
-  padding: 6px 8px;
+  padding: 8px 12px 6px;
   border-radius: 8px;
   background: rgba(244, 247, 250, 0.92);
   color: var(--navy-ink);
   font: 700 12px/1.2 var(--font);
   pointer-events: none;
 }
-.oc-scale-ruler { position: relative; min-width: 48px; }
+.oc-scale-ruler {
+  position: relative;
+  min-width: 48px;
+  padding-top: 12px;
+}
 .oc-scale-bar {
   box-sizing: border-box;
-  height: 10px;
+  height: 8px;
   border: 2px solid var(--navy-ink);
   border-top: 0;
   background: transparent;
@@ -753,11 +757,18 @@ a { color: var(--navy); }
 .oc-scale-ticks { position: absolute; inset: 0; pointer-events: none; }
 .oc-scale-tick {
   position: absolute;
+  top: 0;
   bottom: 0;
-  transform: translateX(-50%);
+  width: 0;
   border-left: 2px solid var(--navy-ink);
-  height: 16px;
-  padding-top: 16px;
+  transform: translateX(-50%);
+}
+.oc-scale-tick-lbl {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -100%);
+  padding-bottom: 1px;
   font: 700 10px/1 var(--font);
   color: var(--navy-ink);
   white-space: nowrap;
@@ -766,8 +777,9 @@ a { color: var(--navy); }
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: baseline;
   gap: 0 8px;
-  max-width: 220px;
+  max-width: 240px;
 }
 .oc-scale-dist { font-weight: 800; }
 .oc-scale-walk { font-weight: 600; color: var(--muted); white-space: nowrap; }
