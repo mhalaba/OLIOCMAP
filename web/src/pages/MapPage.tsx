@@ -7,6 +7,7 @@ import { CatIcon } from "../components/CategoryBadge";
 import { t } from "../i18n";
 import { currentUser, isOperator, pb, asArray } from "../lib/pb";
 import { findTilesFile } from "../lib/tiles";
+import { searchPlaces, type PlaceHit } from "../lib/placeIndex";
 import { isPresentDate } from "../lib/format";
 import { DEFAULT_CATEGORY_ON, PUBLIC_CATEGORIES, type AuthUser, type Category, type Point, type Service } from "../types";
 
@@ -18,7 +19,7 @@ function pointCoords(p: Point): { lat: number; lon: number } | null {
 }
 
 function pointHaystack(p: Point): string {
-  return [p.title, t(`cat.${p.category}`), p.category, p.description || ""].join(" ").toLowerCase();
+  return [p.title, p.address || "", t(`cat.${p.category}`), p.category, p.description || ""].join(" ").toLowerCase();
 }
 
 function mergeById(base: Point[], extra: Point[]): Point[] {
@@ -84,6 +85,12 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
   const [focusSeq, setFocusSeq] = useState(0);
   const [sheet, setSheet] = useState<"" | "layers" | "needs">("");
   const [busyId, setBusyId] = useState("");
+  const [places, setPlaces] = useState<PlaceHit[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [flyTo, setFlyTo] = useState<{ lng: number; lat: number; zoom?: number; label?: string; seq: number } | null>(null);
+  const [locateSeq, setLocateSeq] = useState(0);
+  const [dropMode, setDropMode] = useState(false);
+  const [dropAt, setDropAt] = useState<{ lat: number; lon: number } | null>(null);
 
   async function loadNeeds() {
     if (demo && !user) {
@@ -182,6 +189,7 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
     const query = q.trim().toLowerCase();
     if (query.length < 2) {
       setHits([]);
+      setPlaces([]);
       return;
     }
     setHits(
@@ -198,8 +206,9 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
           if (!pointCoords(p)) return false;
           return pointHaystack(p).includes(query);
         })
-        .slice(0, 8)
+        .slice(0, 6)
     );
+    setPlaces(searchPlaces(query, 6));
   }, [q, points, cats, services]);
 
   async function patchNeed(p: Point, body: Record<string, unknown>) {
@@ -222,8 +231,12 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
   const activeLayers = PUBLIC_CATEGORIES.filter((c) => cats[c]).length;
   const showNeeds = seesNeeds(user) || (demo && !user);
 
+  function zglosTutaj(lat: number, lon: number) {
+    nav(`/dodaj?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}`);
+  }
+
   return (
-    <div className="map-wrap">
+    <div className={`map-wrap${dropMode ? " drop" : ""}`}>
       <MapView
         key={tilesKey}
         points={points}
@@ -232,7 +245,11 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
         intervalDays={intervalDays}
         focusPoint={focusPoint}
         focusSeq={focusSeq}
-        onLongPress={(lat, lon) => nav(`/dodaj?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}`)}
+        flyTo={flyTo}
+        locateSeq={locateSeq}
+        pickMode={dropMode}
+        onPick={(lat, lon) => setDropAt({ lat, lon })}
+        onLongPress={(lat, lon) => zglosTutaj(lat, lon)}
         onTilesMissing={(missing, online) => {
           if (missing && online) setTileWarn(t("map.brakKafelkow"));
           else if (missing) setTileWarn(t("map.brakKafelkowKrotko"));
@@ -250,39 +267,106 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
             aria-label={t("map.szukaj")}
             autoComplete="off"
             value={q}
+            onFocus={() => setSearchOpen(true)}
+            onBlur={() => window.setTimeout(() => setSearchOpen(false), 150)}
             onChange={(e) => setQ(e.target.value)}
           />
-          {q.trim().length >= 2 ? (
+          {searchOpen || q.trim().length >= 2 ? (
             <div className="search-hits card" role="listbox" aria-label={t("map.szukaj")}>
-              {hits.length ? (
-                hits.map((h) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    className="search-hit"
-                    role="option"
-                    onClick={() => {
-                      setFocusPoint(h);
-                      setFocusSeq((n) => n + 1);
-                      setQ("");
-                    }}
-                  >
-                    <CatIcon category={h.category} size={22} />
-                    <span>
-                      <strong>{h.title}</strong>
-                      <span className="search-hit-meta">{t(`cat.${h.category}`)}</span>
+              <button
+                type="button"
+                className="search-hit locate"
+                role="option"
+                onClick={() => {
+                  setLocateSeq((n) => n + 1);
+                  setQ("");
+                  setSearchOpen(false);
+                }}
+              >
+                <span className="search-hit-dot" aria-hidden />
+                <span>
+                  <strong>{t("map.mojaLokalizacja")}</strong>
+                  <span className="search-hit-meta">{t("map.znajdzMnie")}</span>
+                </span>
+              </button>
+
+              {hits.map((h) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  className="search-hit"
+                  role="option"
+                  onClick={() => {
+                    setFocusPoint(h);
+                    setFocusSeq((n) => n + 1);
+                    setQ("");
+                    setSearchOpen(false);
+                  }}
+                >
+                  <CatIcon category={h.category} size={22} />
+                  <span>
+                    <strong>{h.title}</strong>
+                    <span className="search-hit-meta">
+                      {t(`cat.${h.category}`)}
+                      {h.address ? ` · ${h.address}` : ""}
                     </span>
-                  </button>
-                ))
-              ) : (
-                <p className="search-empty">{t("map.szukajBrak")}</p>
-              )}
+                  </span>
+                </button>
+              ))}
+
+              {places.map((pl) => (
+                <button
+                  key={`${pl.kind}-${pl.name}-${pl.lng.toFixed(4)}`}
+                  type="button"
+                  className="search-hit"
+                  role="option"
+                  onClick={() => {
+                    // Ulica z bliska, miejscowość z dystansem — inaczej widać samo pole.
+                    setFlyTo({
+                      lng: pl.lng,
+                      lat: pl.lat,
+                      zoom: pl.kind === "ulica" ? 15 : 13,
+                      label: pl.name,
+                      seq: Date.now(),
+                    });
+                    setQ("");
+                    setSearchOpen(false);
+                  }}
+                >
+                  <span className="search-hit-dot street" aria-hidden />
+                  <span>
+                    <strong>{pl.name}</strong>
+                    <span className="search-hit-meta">{t(`map.${pl.kind}`)}</span>
+                  </span>
+                </button>
+              ))}
+
+              {q.trim().length >= 2 && hits.length === 0 && places.length === 0 ? (
+                <p className="search-empty">
+                  {t("map.szukajBrak")}
+                  <span className="search-hit-meta"> {t("map.szukajPodpowiedz")}</span>
+                </p>
+              ) : null}
+              {q.trim().length < 2 ? <p className="search-empty">{t("map.szukajPodpowiedz")}</p> : null}
             </div>
           ) : null}
         </div>
         <div className="ctl-row">
           <button type="button" className="ctl-btn" aria-expanded={sheet === "layers"} onClick={() => setSheet(sheet === "layers" ? "" : "layers")}>
             {t("map.warstwy")} <span className="n">{activeLayers}/{PUBLIC_CATEGORIES.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`ctl-btn ${dropMode ? "on" : ""}`}
+            aria-pressed={dropMode}
+            onClick={() => {
+              setDropMode(!dropMode);
+              setDropAt(null);
+              setSheet("");
+              setSearchOpen(false);
+            }}
+          >
+            {t("map.pinezka")}
           </button>
           {showNeeds ? (
             <button
@@ -335,9 +419,33 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
           ) : null}
         </div>
       ) : null}
-      <button type="button" className="fab" onClick={() => nav("/dodaj")}>
-        + {t("nav.zglos")}
-      </button>
+      {dropMode ? (
+        <>
+          <div className="crosshair" aria-hidden />
+          <div className="drop-bar card">
+            <span className="drop-coords">
+              {dropAt ? `${dropAt.lat.toFixed(5)}, ${dropAt.lon.toFixed(5)}` : t("map.pinezkaUstaw")}
+            </span>
+            <div className="row">
+              <button type="button" className="btn" onClick={() => { setDropMode(false); setDropAt(null); }}>
+                {t("form.anuluj")}
+              </button>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={!dropAt}
+                onClick={() => dropAt && zglosTutaj(dropAt.lat, dropAt.lon)}
+              >
+                {t("map.pinezkaZglos")}
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <button type="button" className="fab" onClick={() => nav("/dodaj")}>
+          + {t("nav.zglos")}
+        </button>
+      )}
     </div>
   );
 }

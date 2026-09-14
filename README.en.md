@@ -55,8 +55,14 @@ example "J.K., OSP Szombierki". Local trust is built on names, not on a status f
 brigade, never the public map and never another node. Whoever can help taps "I'll take it", and
 others see that it is covered.
 
-**Reporting in seconds.** Long-pressing the map opens the form at that spot. An account is required
-only at save time, and whatever was typed survives the login.
+**Reporting in seconds.** A **pin** button turns on a crosshair: you move the map, see the coordinates
+and tap **report here**. Long-pressing the map does the same. An account is required only at save time,
+and whatever was typed survives the login.
+
+**Search without internet.** One field searches both the points (name, address, category) and the
+street and place names taken from the downloaded map. There is no geocoder, so nothing leaves the
+node and nothing stops working when the link is cut. The basemap carries no house numbers, and streets
+cover the area that has already loaded. The same list offers **my location**, to see where you stand.
 
 **Offline on the phone.** After one visit the app works without a network, and a report submitted
 offline waits on the phone and reaches the node when connectivity returns.

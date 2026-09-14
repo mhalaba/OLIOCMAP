@@ -25,6 +25,7 @@ import {
 } from "../lib/poland";
 import { coverageName, insideCoverage, resolveTiles, type TileCoverage } from "../lib/tiles";
 import { WalkScaleControl } from "../lib/walkScale";
+import { harvest } from "../lib/placeIndex";
 import { GLYPH_FONT, GLYPH_URL, normalizeStyleFonts, registerGlyphProtocol } from "../lib/glyphs";
 import { CATEGORY_COLORS, type Category, type Point, type Service } from "../types";
 import { activationText, freshnessLabel, isPresentDate } from "../lib/format";
@@ -54,6 +55,10 @@ type Props = {
   preserveDrawingBuffer?: boolean;
   center?: [number, number];
   zoom?: number;
+  /** Przesuń mapę w wskazane miejsce (wynik wyszukiwania ulicy albo miejscowości). */
+  flyTo?: { lng: number; lat: number; zoom?: number; label?: string; seq: number } | null;
+  /** Zmiana wartości uruchamia lokalizację GPS — „znajdź mnie” z poziomu wyszukiwarki. */
+  locateSeq?: number;
 };
 
 function toFeatures(points: Point[], cats: Record<string, boolean>, services: Service[], intervalDays: number) {
@@ -413,6 +418,8 @@ export function MapView({
   preserveDrawingBuffer = false,
   center,
   zoom,
+  flyTo = null,
+  locateSeq = 0,
 }: Props) {
   const onLongPressRef = useRef(onLongPress);
   onLongPressRef.current = onLongPress;
@@ -680,11 +687,28 @@ export function MapView({
               map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });
             });
           });
+          // Nazwy ulic i miejscowości do wyszukiwarki zbieramy z wczytanych kafelków.
+          // Bez internetu nie ma geokodera, a podkład i tak zna te nazwy.
+          let lastHarvest = 0;
+          const zbierzNazwy = () => {
+            const now = Date.now();
+            if (now - lastHarvest < 1500) return;
+            lastHarvest = now;
+            try {
+              harvest(map);
+            } catch {
+              /* indeks jest dodatkiem, nie może psuć mapy */
+            }
+          };
+          map.on("idle", zbierzNazwy);
+          zbierzNazwy();
           if (shouldAutoLocateOnOpen()) void locateFnRef.current("auto");
         })();
       });
+      // Tryb pinezki można włączyć po starcie mapy, więc nasłuch zakładamy zawsze,
+      // a warunek sprawdzamy z referencji. Inaczej przesuwanie mapy nic nie ustawia.
       map.on("click", (e) => {
-        if (pickMode && onPick) onPick(e.lngLat.lat, e.lngLat.lng);
+        if (pickModeRef.current) onPickRef.current?.(e.lngLat.lat, e.lngLat.lng);
       });
       // Długie przytrzymanie / prawy klik → szybkie zgłoszenie w tym miejscu.
       map.on("contextmenu", (e) => {
@@ -727,12 +751,11 @@ export function MapView({
         canvas.addEventListener("touchend", cancel, { passive: true });
         canvas.addEventListener("touchcancel", cancel, { passive: true });
       }
-      if (pickMode && onPick) {
-        map.on("moveend", () => {
-          const c = map.getCenter();
-          onPick(c.lat, c.lng);
-        });
-      }
+      map.on("moveend", () => {
+        if (!pickModeRef.current) return;
+        const c = map.getCenter();
+        onPickRef.current?.(c.lat, c.lng);
+      });
       mapRef.current = map;
       if (pendingLocateRef.current) {
         const queued = pendingLocateRef.current;
@@ -781,6 +804,30 @@ export function MapView({
     if (map.isStyleLoaded()) open();
     else map.once("load", open);
   }, [focusPoint, focusSeq]);
+
+  useEffect(() => {
+    if (!flyTo || !flyTo.seq) return;
+    const map = mapRef.current;
+    if (!map || !inPolandBounds(flyTo.lng, flyTo.lat)) return;
+    try {
+      popupRef.current?.remove();
+      map.easeTo({ center: [flyTo.lng, flyTo.lat], zoom: flyTo.zoom ?? Math.max(map.getZoom() || 12, 15), duration: 700 });
+      if (flyTo.label) {
+        // Krótki dymek z nazwą: bez niego nie wiadomo, który z kilku podobnych wyników to ten.
+        popupRef.current = new maplibregl.Popup({ closeButton: true, maxWidth: "220px" })
+          .setLngLat([flyTo.lng, flyTo.lat])
+          .setHTML(`<div class="popup"><h3>${escapeHtml(flyTo.label)}</h3></div>`)
+          .addTo(map);
+      }
+    } catch {
+      /* poza maxBounds — zostawiamy widok */
+    }
+  }, [flyTo]);
+
+  useEffect(() => {
+    if (!locateSeq) return;
+    void locateFnRef.current("user");
+  }, [locateSeq]);
 
   useEffect(() => {
     if (!geoMsg) return;
