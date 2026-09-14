@@ -372,39 +372,52 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
 
   function applyPosition(map: Map, pos: GeoOk) {
     try {
-      ensureUserLocLayers(map);
+      if (map.isStyleLoaded()) ensureUserLocLayers(map);
+      const radius = Math.min(Math.max(pos.accuracy || 40, 20), 4000);
+      const src = map.getSource("user-loc") as GeoJSONSource | undefined;
+      src?.setData({
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: {},
+            geometry: accuracyPolygon(pos.lng, pos.lat, radius),
+          },
+        ],
+      });
     } catch {
-      /* styl jeszcze niegotowy */
+      /* kółko dokładności jest opcjonalne */
+    }
+    try {
+      if (!markerRef.current) {
+        markerRef.current = new maplibregl.Marker({ element: makeUserMarkerEl(), anchor: "center" })
+          .setLngLat([pos.lng, pos.lat])
+          .addTo(map);
+      } else {
+        markerRef.current.setLngLat([pos.lng, pos.lat]);
+      }
+    } catch {
+      /* znacznik — mapa bez WebGL */
     }
     const radius = Math.min(Math.max(pos.accuracy || 40, 20), 4000);
-    const src = map.getSource("user-loc") as GeoJSONSource | undefined;
-    src?.setData({
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: accuracyPolygon(pos.lng, pos.lat, radius),
-        },
-      ],
-    });
-    if (!markerRef.current) {
-      markerRef.current = new maplibregl.Marker({ element: makeUserMarkerEl(), anchor: "center" })
-        .setLngLat([pos.lng, pos.lat])
-        .addTo(map);
-    } else {
-      markerRef.current.setLngLat([pos.lng, pos.lat]);
+    try {
+      const latRad = (pos.lat * Math.PI) / 180;
+      const dLat = radius / 110574;
+      const dLng = radius / (111320 * Math.max(Math.cos(latRad), 0.01));
+      map.fitBounds(
+        [
+          [pos.lng - dLng, pos.lat - dLat],
+          [pos.lng + dLng, pos.lat + dLat],
+        ],
+        { padding: 48, maxZoom: 16, duration: 850 }
+      );
+    } catch {
+      try {
+        map.easeTo({ center: [pos.lng, pos.lat], zoom: Math.max(map.getZoom() || 12, 14), duration: 800 });
+      } catch {
+        /* ignore */
+      }
     }
-    const latRad = (pos.lat * Math.PI) / 180;
-    const dLat = radius / 110574;
-    const dLng = radius / (111320 * Math.max(Math.cos(latRad), 0.01));
-    map.fitBounds(
-      [
-        [pos.lng - dLng, pos.lat - dLat],
-        [pos.lng + dLng, pos.lat + dLat],
-      ],
-      { padding: 48, maxZoom: 16, duration: 850 }
-    );
     if (pickModeRef.current) onPickRef.current?.(pos.lat, pos.lng);
   }
 
@@ -427,20 +440,37 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
         source === "auto" ? { enableHighAccuracy: false, maximumAge: 60000, timeout: 8000 } : undefined
       );
       if (!mapRef.current) return;
-      if (result.ok) {
-        setGeoMsg("");
-        const go = () => {
-          if (mapRef.current) applyPosition(mapRef.current, result);
-        };
-        if (map.isStyleLoaded()) go();
-        else map.once("load", go);
-      } else {
+      if (!result.ok) {
         setGeoMsg(geoMessage(result.reason));
         if (result.reason === "denied") {
           setAutoLocate(false);
           setAutoLocatePref(false);
         }
+        return;
       }
+      setGeoMsg("");
+      await new Promise<void>((resolve) => {
+        let done = false;
+        const go = () => {
+          if (done) return;
+          done = true;
+          try {
+            if (mapRef.current) applyPosition(mapRef.current, result);
+          } catch {
+            setGeoMsg(t("map.geoNiedostepna"));
+          } finally {
+            resolve();
+          }
+        };
+        if (map.isStyleLoaded()) go();
+        else {
+          const wait = window.setTimeout(go, 2500);
+          map.once("load", () => {
+            window.clearTimeout(wait);
+            go();
+          });
+        }
+      });
     } finally {
       setLocating(false);
     }

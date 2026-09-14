@@ -366,7 +366,7 @@ a { color: var(--navy); }
   left: max(10px, env(safe-area-inset-left));
   right: auto;
   max-width: min(320px, calc(100% - 20px));
-  bottom: calc(var(--nav-h) + 128px);
+  bottom: calc(var(--nav-h) + 248px);
   z-index: 8;
   background: var(--navy-ink);
   color: #e8eef4;
@@ -631,7 +631,7 @@ a { color: var(--navy); }
 
 .warn-offline {
   position: absolute;
-  left: 10px; right: 10px; bottom: calc(var(--nav-h) + 80px);
+  left: 10px; right: 10px; bottom: calc(var(--nav-h) + 188px);
   z-index: 5;
   background: #111;
   color: #ffd60a;
