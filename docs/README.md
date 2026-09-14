@@ -8,7 +8,9 @@
 | [model-danych.md](model-danych.md) | kolekcje, pola rekordu, role, reguły dostępu, retencja |
 | [api.md](api.md) | `/api/*`, `/sync/v1/*`, `/tiles`, uwierzytelnianie, kody odpowiedzi |
 | [eksploatacja.md](eksploatacja.md) | uruchomienie, zmienne, HTTPS, kafelki, kopie, awarie |
+| [plan.md](plan.md) | co zrobione, co dalej i czego świadomie nie robimy |
 | [mesh.md](mesh.md) | sieć węzłów bez centrali: zaufanie, katalog, relay |
+| [radio.md](radio.md) | szkic transportu radiowego (LoRa), bez implementacji |
 | [opsec.md](opsec.md) | czego nie mapujemy, geometria publiczna, dane osobowe |
 | [sprzet.md](sprzet.md) | sprzęt węzła, zasilanie, zegar RTC, klucze |
 | [ui-oc.md](ui-oc.md) | warstwa graficzna: paleta, ikony kategorii, glify |
@@ -33,6 +35,7 @@ the people who physically run a node. The English set covers what an integrator 
 - Piszesz kod: [architektura.md](architektura.md) → [model-danych.md](model-danych.md) → [api.md](api.md).
 - Łączysz gminy: [mesh.md](mesh.md).
 - Decydujesz, co wolno pokazać: [opsec.md](opsec.md).
+- Zastanawiasz się, co dalej: [plan.md](plan.md).
 
 Deploying a node: [en/operations.md](en/operations.md). Writing code:
 [en/architecture.md](en/architecture.md). Connecting municipalities: [en/mesh.md](en/mesh.md).

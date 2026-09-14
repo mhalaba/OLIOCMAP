@@ -12,20 +12,27 @@ neighbour that additionally holds the right to set `blocked`.
 | Layer | Before (hub and spoke) | Now (mesh) |
 | --- | --- | --- |
 | Connections | `CENTRAL_URL` or `PEERS` in `.env`, trust granted by an admin | the operator adds a neighbour in the UI (`/operator/wezly`); the node directory spreads across the network |
-| Keys | a neighbour's key came only from its own `/sync/v1/health` | a trusted neighbour advertises the keys of **its** trusted peers; we store them as *untrusted, learned via X* (trust on first use, a changed key raises an alert) |
-| Row flow | a node pushed only its own rows; foreign rows were accepted only with the hub's `relay_sig` | with `MESH_RELAY=1` a node also pushes foreign verified rows carrying their **origin signature**; the receiver verifies with a key from the directory, and the relay signs and alters nothing |
+| Keys | a neighbour's key came only from its own `/sync/v1/health` | a trusted neighbour advertises the keys of **its** trusted peers; we store them as *untrusted, learned via X* (trust on first use, a changed key raises an alert). Only explicitly trusted nodes' keys verify signatures |
+| Row flow | a node pushed only its own rows; foreign rows were accepted only with the hub's `relay_sig` | with `MESH_RELAY=1` a node also pushes foreign verified rows carrying their **origin signature**; the receiver verifies with the key of a node it trusts directly, and the relay signs and alters nothing |
 | Neighbour status | only the hub collected `/sync/v1/status` | every node remembers the state of its trusted neighbours (visible on `/status`) |
 | No network at all | USB bundle via `export.bundle` / `import.bundle` | unchanged — it works as sneakernet between any two nodes |
 
-## Trust model (unchanged in substance)
+## Trust model
 
 1. **Origin signature** (`sig`, Ed25519) is attached to every verified row and travels with it through
    any number of relays. A relay cannot alter the content.
 2. **Connection trust** (`peers.trusted`) is granted manually by an operator after comparing key
    fingerprints (phone, handheld radio, meeting). Without it there is no pull or push with that node.
-3. **Knowing a key** is enough to verify a row that arrived from a trusted neighbour. A key learned
-   "via a neighbour" is a one-hop vouch: you trust B, B trusts C, so a row signed by C and delivered
-   by B is accepted. You do not connect to C until an operator clicks Trust.
+3. **A key from the directory does not admit records.** Origin signatures are verified only with the
+   keys of explicitly trusted nodes. A key learned "via a neighbour" serves to recognise that node in
+   the panel and to compare fingerprints, nothing more. Rows from node C relayed by B stay rejected
+   (with a "waiting for trust" line in the log) until an operator trusts C.
+
+   The reason is concrete. If a directory key were enough, a trusted neighbour could advertise an
+   invented node with a key it controls and sign arbitrary verified points in that node's name.
+   Nodes whose key is already known are protected by trust on first use; new ones would have no
+   protection at all. Relaying still works and still pays off: it shortens the path to a node you
+   trust when the direct link is down.
 4. `blocked` still comes only from a trusted hub (`shared/merge.mjs`). An ordinary node cannot block
    someone else's point network-wide; it can only remove it locally.
 5. **Needs (`potrzeba`) never leave a node** — not by relay, not in a USB bundle. That is neighbours'
@@ -77,7 +84,15 @@ a radio network you have to type the address anyway). Instead:
 - Low-bandwidth radio transport (Meshtastic/LoRa): today the protocol is HTTP and JSON with batches of
   200 rows. LoRa would need a separate compressed "change headers only" stream, with bodies fetched
   over Wi-Fi.
-- Suggesting trust based on the number of vouches (today one vouch means the key is known; trust is
+- Suggesting trust based on the number of vouches (today a vouch only creates a panel entry; trust is
   always manual).
 - Signing the directory itself (today it is credible only because it arrived over a trusted,
   authenticated connection).
+
+## What is checked automatically
+
+`docker-compose.mesh.yml` brings up two peer nodes with no hub, and `tests/integration/mesh.mjs`
+checks four things: a point travels from A to B carrying its origin signature, a need report never
+leaves its node (neither on its own nor pushed directly), a trusted neighbour cannot impersonate a
+node it merely vouched for, and once that node is trusted the very same record is accepted. It runs
+as a separate CI job.

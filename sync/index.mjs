@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync, gzipSync } from "node:zlib";
-import { advertisedNodes, mergeDirectory } from "../shared/directory.mjs";
+import { advertisedNodes, isVouchedOnly, mergeDirectory, originKeys } from "../shared/directory.mjs";
 import { cfg, parsePeersEnv } from "./config.mjs";
 import { createPb } from "./pb.mjs";
 import { merge } from "../shared/merge.mjs";
@@ -135,18 +135,9 @@ async function fetchJson(url, opts = {}, timeoutMs = 3000) {
   }
 }
 
-function originKeyMap(peerRows) {
-  const map = new Map();
-  for (const p of peerRows) {
-    if (p.public_key) map.set(p.node_id, p.public_key);
-  }
-  map.set(cfg.nodeId, publicB64);
-  return map;
-}
-
 function verifyIncomingRow(row, peerRows, sender) {
   if (!row || !row.sig) return { ok: false, error: "brak podpisu" };
-  const keys = originKeyMap(peerRows);
+  const keys = originKeys(peerRows, cfg.nodeId, publicB64);
   const originKey = keys.get(row.source_node);
   if (originKey) {
     try {
@@ -166,6 +157,13 @@ function verifyIncomingRow(row, peerRows, sender) {
     } catch {
       return { ok: false, error: "klucz centrali nieczytelny" };
     }
+  }
+  if (isVouchedOnly(peerRows, row.source_node)) {
+    return {
+      ok: false,
+      vouchedOnly: true,
+      error: `węzeł ${row.source_node} znany z katalogu, ale bez zaufania — zaufaj mu na /operator/wezly`,
+    };
   }
   return { ok: false, error: "nieznany węzeł źródłowy" };
 }
@@ -226,15 +224,22 @@ async function pullPeer(peer, peerRows) {
   if (!res.ok) throw new Error(`pull HTTP ${res.status}`);
   const rows = (res.data && res.data.rows) || [];
   let applied = 0;
+  // Sąsiad może przekazywać wiele rekordów z węzła, któremu jeszcze nie ufamy.
+  // Logujemy to raz na cykl, a nie raz na rekord, żeby nie zalać dziennika.
+  const czekaNaZaufanie = new Set();
   for (const row of rows) {
     if (row.category === "potrzeba") continue;
     const v = verifyIncomingRow(row, peerRows, peer.node_id);
     if (!v.ok) {
-      await logSync("pull", peer.node_id, false, 0, `odrzucono ${row.id}: ${v.error}`);
+      if (v.vouchedOnly) czekaNaZaufanie.add(row.source_node);
+      else await logSync("pull", peer.node_id, false, 0, `odrzucono ${row.id}: ${v.error}`);
       continue;
     }
     const r = await applyRow(row, peer);
     if (r.action === "insert" || r.action === "update") applied += 1;
+  }
+  for (const nodeId of czekaNaZaufanie) {
+    await logSync("pull", peer.node_id, false, 0, `rekordy z węzła ${nodeId} czekają na zaufanie — /operator/wezly`);
   }
   const next = (res.data && res.data.next_cursor) || (rows.length ? rows[rows.length - 1].hlc : since);
   if (peer.id) {
@@ -628,6 +633,12 @@ async function handle(req, res) {
       const accepted = [];
       const rejected = [];
       for (const row of rows) {
+        // Potrzeby to dane osobowe sąsiadów. Nie wysyłamy ich i nie przyjmujemy,
+        // nawet od zaufanego węzła, który zmodyfikowałby swojego klienta.
+        if (row && row.category === "potrzeba") {
+          rejected.push({ id: row.id, error: "potrzeby nie wędrują między węzłami" });
+          continue;
+        }
         const v = verifyIncomingRow(row, peers, sender);
         if (!v.ok) {
           rejected.push({ id: row.id, error: v.error });

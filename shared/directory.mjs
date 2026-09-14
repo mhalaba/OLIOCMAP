@@ -10,6 +10,33 @@
  * Klucz raz zapisany nie jest nadpisywany (TOFU): zmiana klucza to alarm, nie aktualizacja.
  */
 
+/**
+ * Klucze, którymi WOLNO weryfikować podpis pochodzenia przychodzącego rekordu.
+ *
+ * Tylko węzły zaufane wprost przez operatora, plus my sami. Klucz poznany przez poręczenie
+ * sąsiada (`trusted=false`, notatka „poznany przez …”) służy wyłącznie do rozpoznania węzła
+ * w panelu i do porównania odcisku — nie do wpuszczania jego rekordów.
+ *
+ * Bez tego ograniczenia zaufany sąsiad mógłby ogłosić wymyślony węzeł z kluczem, który sam
+ * kontroluje, i podpisywać jego nazwą dowolne zweryfikowane punkty.
+ */
+export function originKeys(peerRows, selfId, selfKey) {
+  const map = new Map();
+  for (const p of peerRows || []) {
+    if (!p || !p.node_id || !p.public_key) continue;
+    if (p.trusted !== true) continue;
+    map.set(p.node_id, p.public_key);
+  }
+  if (selfId) map.set(selfId, selfKey || "");
+  return map;
+}
+
+/** Czy węzeł jest nam znany z katalogu, ale jeszcze bez zaufania (do czytelnego komunikatu). */
+export function isVouchedOnly(peerRows, nodeId) {
+  const row = (peerRows || []).find((p) => p && p.node_id === nodeId);
+  return !!row && row.trusted !== true && !!row.public_key;
+}
+
 export function advertisedNodes({ selfId, publicKey, baseUrl, role, peers }) {
   const out = [{ node_id: selfId, public_key: publicKey || "", base_url: baseUrl || "", role: role || "node" }];
   for (const p of peers || []) {

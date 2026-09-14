@@ -1,0 +1,164 @@
+# Dwa równorzędne węzły bez centrali — test sieci mesh.
+# Użycie: docker compose -f docker-compose.yml -f docker-compose.mesh.yml \
+#           up --build --abort-on-container-exit --exit-code-from mesh-runner
+#
+# Węzeł A to zwykłe usługi z docker-compose.yml (bytom-01, Caddy pod aliasem `caddy`).
+# Węzeł B to komplet b-* (radzionkow-01, Caddy pod aliasem `b-caddy`).
+# Zaufanie ustawia test przez API, tak jak zrobiłby to operator w panelu.
+
+x-node-b-env: &node-b-env
+  NODE_ID: radzionkow-01
+  NODE_ROLE: node
+  NODE_NAME: OSP Radzionków
+  NODE_GMINA_TERYT: "2413011"
+  NODE_GMINA_NAME: Radzionków
+  NODE_OPERATOR_NAME: OSP Radzionków
+  PEERS: ""
+  CENTRAL_URL: ""
+  PUBLIC_URL: http://b-caddy
+  SYNC_INTERVAL_S: "5"
+  PUBLIC_GEOM_MODE: gmina
+  REGISTRATION_MODE: open
+  AUTO_VERIFY_TRUSTED: "false"
+  POTRZEBA_TTL_H: "72"
+  CONFIRM_INTERVAL_DAYS: "14"
+  TLS_MODE: off
+  TLS_CERT_FILE: ""
+  TLS_KEY_FILE: ""
+  PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:-admin@node.local}
+  PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:-change-me}
+  SYNC_SUPERUSER_EMAIL: ${SYNC_SUPERUSER_EMAIL:-sync@node.local}
+  SYNC_SUPERUSER_PASSWORD: ${SYNC_SUPERUSER_PASSWORD:-change-me-too}
+  APP_VERSION: ${APP_VERSION:-0.1.0}
+  AED_IMPORT: "off"
+  AED_BBOX: ""
+  AED_BUNDLE_PATH: /app/data/openaedmap-pl.geojson.gz
+  TILES_DIR: /tiles
+  TILES_BBOX: ${TILES_BBOX:-18.82,50.30,18.98,50.42}
+  TILES_MAXZOOM: ${TILES_MAXZOOM:-14}
+  PMTILES_SOURCE: ${PMTILES_SOURCE:-auto}
+  TILES_AGENT_SOCK: ""
+
+services:
+  sync-worker:
+    environment:
+      SYNC_INTERVAL_S: "5"
+      AED_IMPORT: "off"
+      PUBLIC_URL: http://caddy
+      CENTRAL_URL: ""
+      PEERS: ""
+
+  pocketbase:
+    environment:
+      AED_IMPORT: "off"
+
+  b-pocketbase:
+    build:
+      context: .
+      dockerfile: pocketbase/Dockerfile
+    environment:
+      <<: *node-b-env
+    volumes:
+      - pb_data_b:/pb/pb_data
+      - ./pb_hooks:/pb/pb_hooks
+      - ./pb_migrations:/pb/pb_migrations
+    expose:
+      - "8090"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 25s
+
+  b-sync:
+    build:
+      context: .
+      dockerfile: sync/Dockerfile
+      args:
+        BUILD_TIME_MS: "1700000000000"
+    environment:
+      <<: *node-b-env
+      PB_URL: http://b-pocketbase:8090
+      KEYS_DIR: /keys
+      SYNC_PORT: "8091"
+    volumes:
+      - node_keys_b:/keys
+      - ./shared:/app/shared:ro
+      - ./data:/app/data:ro
+    depends_on:
+      b-pocketbase:
+        condition: service_healthy
+    expose:
+      - "8091"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8091/sync/v1/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  b-caddy:
+    build: ./caddy
+    depends_on:
+      b-pocketbase:
+        condition: service_healthy
+      b-sync:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    ports:
+      - "8093:80"
+    networks:
+      default:
+        aliases:
+          - b-caddy
+    environment:
+      TLS_MODE: off
+      PB_UPSTREAM: b-pocketbase:8090
+      SYNC_UPSTREAM: b-sync:8091
+    volumes:
+      - ./caddy:/tpl:ro
+      - ./caddy/entrypoint.sh:/entrypoint.sh:ro
+      - web_static:/srv:ro
+      - caddy_data_b:/data
+    entrypoint: ["sh", "/entrypoint.sh"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  mesh-runner:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    network_mode: service:caddy
+    depends_on:
+      caddy:
+        condition: service_healthy
+      pocketbase:
+        condition: service_healthy
+      sync-worker:
+        condition: service_healthy
+      b-caddy:
+        condition: service_healthy
+      b-sync:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://127.0.0.1
+      PEER_URL: http://b-caddy
+      PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:-admin@node.local}
+      PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:-change-me}
+      NODE_ID: ${NODE_ID:-bytom-01}
+      PEER_NODE_ID: radzionkow-01
+    command: ["node", "integration/mesh.mjs"]
+
+volumes:
+  pb_data_b:
+  node_keys_b:
+  caddy_data_b:

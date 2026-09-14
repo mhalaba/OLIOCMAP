@@ -11,6 +11,7 @@ import { MapPage } from "./pages/MapPage";
 import { CertPage, NodesPage, ReportPage } from "./pages/MiscPages";
 import { MyPointsPage } from "./pages/MyPointsPage";
 import { OperatorPage } from "./pages/OperatorPage";
+import { PatrolPage } from "./pages/PatrolPage";
 import { PrintPage } from "./pages/PrintPage";
 import { PrivacyPage } from "./pages/PrivacyPage";
 import { RegisterPage } from "./pages/RegisterPage";
@@ -100,6 +101,7 @@ export default function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/operator/wezly" element={<NodesPage />} />
         <Route path="/wydruk" element={<PrintPage />} />
+        <Route path="/obchod" element={<PatrolPage intervalDays={intervalDays} />} />
         <Route path="/prywatnosc" element={<PrivacyPage />} />
         <Route path="/instalacja-certyfikatu" element={<CertPage />} />
         <Route path="/zglos-blad/:id" element={<ReportPage />} />

@@ -356,5 +356,17 @@
     "zalatwione": "Załatwione",
     "wziete": "Ktoś już to wziął",
     "osoby": "os."
+  },
+  "patrol": {
+    "tytul": "Obchód",
+    "opis": "Lista od najbardziej zaległych. Potwierdzaj na miejscu telefonem albo wydrukuj i obejdź z długopisem.",
+    "data": "Data",
+    "zalegle": "zaległych: {n}",
+    "tylkoZalegle": "Tylko zaległe",
+    "pokazWszystkie": "Pokaż wszystkie",
+    "pusto": "Nic nie czeka na potwierdzenie.",
+    "przypomnienie": "Zaległych potwierdzeń: {n}. Punkt niepotwierdzony jest wart tyle, co jego brak.",
+    "otworz": "Otwórz obchód",
+    "stopka": "Po obejściu wpisz potwierdzenia na węźle. Wydruk jest kopią z dnia wydruku."
   }
 }

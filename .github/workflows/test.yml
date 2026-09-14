@@ -4,6 +4,7 @@ on:
   pull_request:
 jobs:
   test:
+    name: węzeł i centrala
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -12,3 +13,32 @@ jobs:
       - run: sudo sysctl -w net.bridge.bridge-nf-call-iptables=0 || true
       - run: docker compose --profile central -f docker-compose.yml -f docker-compose.test.yml down -v || true
       - run: docker compose --profile central -f docker-compose.yml -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
+
+  mesh:
+    name: dwa równorzędne węzły
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - run: cp .env.example .env
+      - run: sudo sysctl -w net.bridge.bridge-nf-call-iptables=0 || true
+      - run: docker compose -f docker-compose.yml -f docker-compose.mesh.yml down -v || true
+      - run: docker compose -f docker-compose.yml -f docker-compose.mesh.yml up --build --abort-on-container-exit --exit-code-from mesh-runner
+      - name: dziennik synchronizacji przy niepowodzeniu
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.mesh.yml logs --tail 120 sync-worker b-sync || true
+
+  jednostkowe:
+    name: jednostkowe i schemat
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node scripts/check-schema.mjs
+      - run: node --test tests/unit/*.test.mjs
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web

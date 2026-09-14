@@ -136,6 +136,43 @@ Trzy rzeczy, które już raz położyły mapę na produkcji:
 
 Paletę i ikony opisuje [ui-oc.md](ui-oc.md).
 
+## Portal powitalny i punkt dostępowy
+
+Żeby zobaczyć mapę, mieszkaniec musi trafić na adres węzła. W kryzysie nie trafi, jeżeli będzie
+musiał go znać na pamięć. Dwa elementy to załatwiają.
+
+**Portal powitalny.** Telefony po wejściu do sieci pobierają ustalone adresy, żeby sprawdzić, czy
+jest internet. Gdy węzeł odpowie przekierowaniem zamiast oczekiwanej treści, system sam pokazuje
+okno z mapą. Włącza to jedna zmienna:
+
+```
+PORTAL_URL=http://192.168.4.1/
+```
+
+Po jej ustawieniu Caddy przejmuje adresy testowe Androida, iOS-a, Windowsa i Firefoksa
+i przekierowuje na podany adres. Puste `PORTAL_URL` wyłącza mechanizm, więc zwykłe wdrożenie
+w sieci gminnej niczego nie przejmuje.
+
+Działa to tylko wtedy, gdy nazwy z tych adresów rozwiązują się na węzeł. W sieci gminnej z własnym
+DNS-em trzeba to ustawić po stronie DNS-u. We własnym punkcie dostępowym robi to `dnsmasq`.
+
+**Punkt dostępowy.** Skrypt przygotowuje konfigurację dla Raspberry Pi z Wi-Fi:
+
+```bash
+scripts/hotspot.sh              # podgląd, nic nie instaluje
+sudo scripts/hotspot.sh --wlacz # instalacja i włączenie usług
+```
+
+Powstaje otwarta sieć `MAPA-KRYZYSOWA`, DHCP, oraz DNS kierujący każdą nazwę na węzeł. Sieć
+celowo nie daje internetu: prowadzi wyłącznie do mapy. Hasła nie ma, bo w kryzysie nikt nie będzie
+przepisywał klucza z kartki, a mapa i tak nie wymaga logowania do oglądania.
+
+Przy `TLS_MODE=internal` okno portalu pokaże ostrzeżenie o certyfikacie. Do samego portalu
+prościej zostawić adres `http`.
+
+**Tego nie da się sprawdzić w CI.** Punkt dostępowy wymaga sprzętu z kartą Wi-Fi. Przejrzyj
+wygenerowane pliki przed włączeniem i sprawdź telefonem, zanim uznasz to za działające.
+
 ## Kopie zapasowe
 
 ```bash

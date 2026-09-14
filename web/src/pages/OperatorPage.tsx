@@ -138,6 +138,8 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
         <Link to="/admin">{t("nav.konta")}</Link>
         {" · "}
         <Link to="/prywatnosc">{t("nav.prywatnosc")}</Link>
+        {" · "}
+        <Link to="/obchod">{t("patrol.tytul")}</Link>
       </p>
       {loadErr ? (
         <p className="note">
@@ -195,6 +197,13 @@ export function OperatorPage({ intervalDays }: { intervalDays: number }) {
             ) : null}
           </p>
         ))}
+
+      {tab === "potwierdzenia" && overdue.length ? (
+        <p className="note info">
+          {t("patrol.przypomnienie", { n: overdue.length })}{" "}
+          <Link to="/obchod">{t("patrol.otworz")}</Link>
+        </p>
+      ) : null}
 
       {tab === "potwierdzenia" &&
         (overdue.length ? (

@@ -7,6 +7,9 @@ x-node-env: &node-env
   NODE_OPERATOR_NAME: ${NODE_OPERATOR_NAME:-OSP Bytom-Szombierki}
   PEERS: ${PEERS:-}
   CENTRAL_URL: ${CENTRAL_URL:-}
+  PUBLIC_URL: ${PUBLIC_URL:-}
+  MESH_RELAY: ${MESH_RELAY:-1}
+  MESH_DIRECTORY: ${MESH_DIRECTORY:-1}
   SYNC_INTERVAL_S: ${SYNC_INTERVAL_S:-30}
   PUBLIC_GEOM_MODE: ${PUBLIC_GEOM_MODE:-gmina}
   REGISTRATION_MODE: ${REGISTRATION_MODE:-open}
@@ -39,6 +42,9 @@ x-central-env: &central-env
   NODE_OPERATOR_NAME: Centrala Mapa Kryzysowa
   PEERS: ""
   CENTRAL_URL: ""
+  PUBLIC_URL: ""
+  MESH_RELAY: ${MESH_RELAY:-1}
+  MESH_DIRECTORY: ${MESH_DIRECTORY:-1}
   SYNC_INTERVAL_S: ${SYNC_INTERVAL_S:-30}
   PUBLIC_GEOM_MODE: gmina
   REGISTRATION_MODE: closed
@@ -172,6 +178,7 @@ services:
       TLS_KEY_FILE: ${TLS_KEY_FILE:-}
       PB_UPSTREAM: pocketbase:8090
       SYNC_UPSTREAM: sync-worker:8091
+      PORTAL_URL: ${PORTAL_URL:-}
     volumes:
       - ./caddy:/tpl:ro
       - ./caddy/entrypoint.sh:/entrypoint.sh:ro
