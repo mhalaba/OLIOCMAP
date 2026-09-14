@@ -55,6 +55,21 @@ export function NodesPage() {
   const [role, setRole] = useState("");
   const [peers, setPeers] = useState<{ id: string; node_id: string; trusted: boolean; public_key: string; note: string; base_url: string }[]>([]);
   const [key, setKey] = useState("");
+  const [newId, setNewId] = useState("");
+  const [newUrl, setNewUrl] = useState("");
+  const [msg, setMsg] = useState("");
+
+  async function addPeer(e: FormEvent) {
+    e.preventDefault();
+    const node_id = newId.trim().toLowerCase();
+    const base_url = newUrl.trim().replace(/\/$/, "");
+    if (!/^[a-z0-9-]{2,40}$/.test(node_id) || !/^https?:\/\//.test(base_url)) return;
+    await pb.collection("peers").create({ node_id, base_url, trusted: false, role: "node", note: "dodany ręcznie" });
+    setNewId("");
+    setNewUrl("");
+    setMsg(t("op.dodano"));
+    setPeers(await pb.collection("peers").getFullList());
+  }
 
   useEffect(() => {
     fetchConfig().then((c) => setRole(c.role));
@@ -80,7 +95,22 @@ export function NodesPage() {
   return (
     <div className="page">
       <h1>{t("op.wezly")}</h1>
-      {role !== "central" ? <p className="note">Ta strona jest przeznaczona dla węzła centralnego. Lokalnie też możesz zaufać sąsiadowi.</p> : null}
+      <p className="hint">{t("op.meshOpis")}</p>
+      <form onSubmit={addPeer} className="card">
+        <h2>{t("op.dodajWezel")}</h2>
+        <label className="field">
+          <span>{t("op.nodeId")}</span>
+          <input value={newId} onChange={(e) => setNewId(e.target.value)} pattern="[a-z0-9-]{2,40}" required />
+        </label>
+        <label className="field">
+          <span>{t("op.adresWezla")}</span>
+          <input value={newUrl} onChange={(e) => setNewUrl(e.target.value)} type="url" required />
+        </label>
+        <button type="submit" className="btn primary">
+          {t("op.dodajWezel")}
+        </button>
+        {msg ? <p className="note info">{msg}</p> : null}
+      </form>
       {peers.map((p) => (
         <article key={p.id} className="card">
           <h2>{p.node_id}</h2>

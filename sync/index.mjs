@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync, gzipSync } from "node:zlib";
+import { advertisedNodes, mergeDirectory } from "../shared/directory.mjs";
 import { cfg, parsePeersEnv } from "./config.mjs";
 import { createPb } from "./pb.mjs";
 import { merge } from "../shared/merge.mjs";
@@ -194,6 +195,21 @@ async function applyRow(remote, peerMeta) {
   return result;
 }
 
+async function learnDirectory(peerRows, advertised, viaNodeId) {
+  try {
+    const r = mergeDirectory(peerRows, advertised, viaNodeId, cfg.nodeId);
+    for (const ins of r.inserts) await pb.post("/api/collections/peers/records", ins);
+    for (const up of r.updates) {
+      const { id, node_id, ...patch } = up;
+      await pb.patch(`/api/collections/peers/records/${id}`, patch);
+    }
+    for (const a of r.alerts) await logSync("health", a.node_id, false, 0, `katalog od ${a.via}: ${a.error}`);
+    if (r.inserts.length) await logSync("health", viaNodeId, true, r.inserts.length, "nowe węzły z katalogu (czekają na zaufanie)");
+  } catch (err) {
+    console.warn("[mesh] katalog", err.message);
+  }
+}
+
 async function pullPeer(peer, peerRows) {
   const since = peer.last_pull_cursor || "";
   let sinceParam = since;
@@ -243,16 +259,31 @@ async function signAndStore(row) {
 
 async function pushPeer(peer) {
   const since = peer.last_push_cursor || "";
-  let filter = `status = "verified" && source_node = "${cfg.nodeId}" && category != "potrzeba"`;
+  // Mesh relay: wypychamy też cudze zweryfikowane wiersze (z podpisem origin) — sąsiad zweryfikuje
+  // podpis kluczem z katalogu. Bez relay: tylko własne.
+  let filter = cfg.meshRelay
+    ? `status = "verified" && category != "potrzeba"`
+    : `status = "verified" && source_node = "${cfg.nodeId}" && category != "potrzeba"`;
   if (since) filter += ` && hlc > "${since}"`;
   const recs = await pb.listAll("points", filter, { sort: "hlc" });
-  const batch = recs.slice(0, 200).map(recordToRow);
-  for (const row of batch) {
-    if (!row.sig) await signAndStore(row);
-    else {
-      const ok = verifyRow(row, publicKeyFromB64(publicB64), row.sig);
-      if (!ok) await signAndStore(row);
+  const all = recs.slice(0, 200).map(recordToRow);
+  const batch = [];
+  for (const row of all) {
+    if (row.source_node === cfg.nodeId) {
+      if (!row.sig) await signAndStore(row);
+      else {
+        const ok = verifyRow(row, publicKeyFromB64(publicB64), row.sig);
+        if (!ok) await signAndStore(row);
+      }
+      batch.push(row);
+    } else if (row.sig) {
+      // Cudzy wiersz idzie dalej nietknięty; bez podpisu origin nie ma czego przekazywać.
+      batch.push(row);
     }
+  }
+  if (!batch.length && all.length) {
+    if (peer.id) await pb.patch(`/api/collections/peers/records/${peer.id}`, { last_push_cursor: all[all.length - 1].hlc });
+    return { pushed: 0 };
   }
   if (!batch.length) return { pushed: 0 };
   const res = await fetchJson(
@@ -381,6 +412,9 @@ async function syncLoopOnce() {
       peer.trusted = trusted;
       peer.id = row ? row.id : peer.id;
       peer.role = (row && row.role) || peer.role;
+      if (trusted && cfg.meshDirectory && Array.isArray(h.data.known_nodes)) {
+        await learnDirectory(freshDb, h.data.known_nodes, peer.node_id);
+      }
       if (trusted) {
         let pullErr = "";
         let pushErr = "";
@@ -519,12 +553,28 @@ async function handle(req, res) {
 
   try {
     if (req.method === "GET" && url.pathname === "/sync/v1/health") {
+      let known = [];
+      if (cfg.meshDirectory) {
+        try {
+          known = advertisedNodes({
+            selfId: cfg.nodeId,
+            publicKey: publicB64,
+            baseUrl: cfg.publicUrl,
+            role: cfg.nodeRole,
+            peers: await getPeerRecords(),
+          });
+        } catch {
+          known = [];
+        }
+      }
       json(200, {
         node_id: cfg.nodeId,
         role: cfg.nodeRole,
         time_ms: Date.now(),
         public_key: publicB64,
         version: cfg.appVersion,
+        mesh: { relay: cfg.meshRelay, directory: cfg.meshDirectory },
+        known_nodes: known,
       });
       return;
     }
@@ -595,16 +645,20 @@ async function handle(req, res) {
     }
 
     if (req.method === "POST" && url.pathname === "/sync/v1/status") {
-      if (cfg.nodeRole !== "central") {
-        json(200, { ok: true, ignored: true });
-        return;
-      }
       const raw = await readBody(req);
       const st = JSON.parse(raw.toString("utf8") || "{}");
       const nid = st.node_id || req.headers["x-node-id"];
       if (!nid) {
         json(400, { error: "brak node_id" });
         return;
+      }
+      if (cfg.nodeRole !== "central") {
+        // Węzeł zwykły zapamiętuje stan tylko zaufanych sąsiadów (mesh), reszta jest ignorowana.
+        const known = (await getPeerRecords()).find((x) => x.node_id === nid);
+        if (!known || !known.trusted) {
+          json(200, { ok: true, ignored: true });
+          return;
+        }
       }
       await upsertRemoteNodeStatus(nid, {
         node_id: nid,

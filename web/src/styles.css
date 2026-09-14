@@ -761,3 +761,72 @@ a { color: var(--navy); }
   box-shadow: var(--shadow);
   font-weight: 600;
 }
+
+/* Mapa bez chrome: jeden pasek przycisków pod wyszukiwarką, reszta w arkuszu od dołu. */
+.ctl-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.ctl-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 40px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--paper); color: var(--ink);
+  font: 700 14px/1 var(--font); box-shadow: var(--shadow); cursor: pointer;
+}
+.ctl-btn.hot { border-color: var(--red); color: var(--red); }
+.ctl-btn .n { font-weight: 800; color: var(--muted); }
+.sheet-backdrop { position: absolute; inset: 0; z-index: 7; background: rgba(15, 39, 68, 0.28); }
+.layer-sheet {
+  position: absolute; left: 0; right: 0; bottom: var(--nav-h); z-index: 8;
+  margin: 0; border-radius: 16px 16px 0 0;
+  max-height: min(70vh, 560px); overflow: auto;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+}
+.layer-sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.layer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.layer-row {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 8px;
+  border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+  font: 700 13px/1.15 var(--font); text-align: left; cursor: pointer; opacity: 0.6;
+}
+.layer-row.on { opacity: 1; }
+.layer-row span { flex: 1; }
+.layer-row .sw { width: 26px; height: 14px; border-radius: 7px; background: var(--line); position: relative; flex: 0 0 auto; }
+.layer-row .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #fff; }
+.layer-row .sw.on { background: var(--navy); }
+.layer-row .sw.on::after { left: 14px; }
+.legend-list { list-style: none; padding: 0; margin: 8px 0 0; }
+.legend-list li { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; }
+@media (min-width: 860px) {
+  .layer-sheet { left: auto; right: 12px; bottom: calc(var(--nav-h) + 12px); width: 380px; border-radius: 16px; }
+}
+
+/* Potrzeby */
+.need-card { border: 1px solid var(--line); border-left-width: 5px; border-radius: 10px; padding: 8px 10px; margin: 8px 0; background: #fff; }
+.need-card.urg-wysoka { border-left-color: var(--red); }
+.need-card.urg-srednia { border-left-color: #c2410c; }
+.need-card.urg-niska { border-left-color: var(--navy); }
+.need-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.need-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.need-title { margin-top: 4px; font-size: 14px; }
+.need-taken { font-size: 13px; font-weight: 700; color: var(--muted); align-self: center; }
+.urg-pill { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); }
+.urg-pill.urg-wysoka { background: #fee2e2; color: var(--red); }
+
+/* Kto potwierdził */
+.popup .who { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* Wydruk A4 z mapą */
+.print-map { position: relative; height: 62vh; min-height: 320px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 8px 0; }
+.print-head { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.print-legend { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 12px; margin: 6px 0; }
+.print-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.print-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.print-table th { text-align: left; border-bottom: 1.5px solid #000; padding: 4px; }
+.print-table td { border-bottom: 1px solid #bbb; padding: 4px; vertical-align: top; }
+@media print {
+  .print-map { height: 120mm; min-height: 0; border-radius: 0; break-inside: avoid; }
+  .print-table { break-inside: auto; }
+  .print-table tr { break-inside: avoid; }
+  .maplibregl-ctrl, .oc-scale { display: none !important; }
+  .oc-scale.print-keep { display: flex !important; }
+}
+.print-map .oc-locate-stack, .print-map .geo-toast, .print-map .maplibregl-ctrl-bottom-left { display: none !important; }

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { MapView } from "../components/MapView";
 import { t } from "../i18n";
 import { uuidv7 } from "../lib/format";
@@ -24,16 +24,35 @@ function toggleIn<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
 }
 
+const DRAFT_KEY = "mk.draft";
+
+type Draft = { lat: number; lon: number; category: Category; title: string; description: string; address: string };
+
+function readDraft(): Draft | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Draft) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AddPointPage() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
   const user = currentUser();
+  const draft = useMemo(readDraft, []);
+  const qLat = Number(params.get("lat"));
+  const qLon = Number(params.get("lon"));
+  const hasQ = Number.isFinite(qLat) && Number.isFinite(qLon) && qLat !== 0 && qLon !== 0;
   const [gmina, setGmina] = useState("Bytom");
-  const [lat, setLat] = useState(50.348);
-  const [lon, setLon] = useState(18.923);
-  const [category, setCategory] = useState<Category>("odpornosc");
-  const [title, setTitle] = useState("");
-  const [address, setAddress] = useState("");
-  const [description, setDescription] = useState("");
+  const [lat, setLat] = useState(hasQ ? qLat : draft?.lat ?? 50.348);
+  const [lon, setLon] = useState(hasQ ? qLon : draft?.lon ?? 18.923);
+  const [category, setCategory] = useState<Category>(draft?.category || "odpornosc");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [title, setTitle] = useState(draft?.title || "");
+  const [address, setAddress] = useState(draft?.address || "");
+  const [description, setDescription] = useState(draft?.description || "");
   const [consent, setConsent] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
@@ -53,9 +72,16 @@ export function AddPointPage() {
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Bez logowania można wypełnić wszystko; konto jest potrzebne dopiero przy zapisie (szkic zostaje).
   useEffect(() => {
-    if (!user) nav("/login?next=/dodaj");
-  }, [user, nav]);
+    if (draft) {
+      try {
+        sessionStorage.removeItem(DRAFT_KEY);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [draft]);
 
   useEffect(() => {
     fetchConfig()
@@ -79,6 +105,16 @@ export function AddPointPage() {
     }
     if (category === "lacznosc" && linkType.length === 0) {
       setErr(t("form.wymaganeLacze"));
+      return;
+    }
+    if (!user) {
+      try {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ lat, lon, category, title, description, address } satisfies Draft));
+      } catch {
+        /* ignore */
+      }
+      setMsg(t("form.zalogujPrzyZapisie"));
+      nav("/login?next=/dodaj");
       return;
     }
     const payload: Record<string, unknown> = {
@@ -115,12 +151,14 @@ export function AddPointPage() {
     }
     setSaving(true);
     try {
-      await pb.collection("points").create(payload);
+      const body: Record<string, unknown> = { ...payload };
+      if (photo && category !== "lacznosc") body.photo = photo;
+      await pb.collection("points").create(body);
       nav("/moje");
     } catch (ex) {
       if (isOfflineError(ex)) {
         await queueAdd(payload);
-        setMsg(t("form.zapisanoTelefon"));
+        setMsg(photo ? `${t("form.zapisanoTelefon")} ${t("form.zdjecieOffline")}` : t("form.zapisanoTelefon"));
       } else {
         setErr(pbErrorMessage(ex, t("err.ogolny")));
       }
@@ -137,6 +175,8 @@ export function AddPointPage() {
         points={[]}
         cats={DEFAULT_CATEGORY_ON}
         services={[]}
+        center={hasQ || draft ? [lon, lat] : undefined}
+        zoom={hasQ || draft ? 15 : undefined}
         pickMode
         onPick={(a, b) => {
           setLat(Math.round(a * 1e6) / 1e6);
@@ -258,6 +298,12 @@ export function AddPointPage() {
           <span>{t("form.nazwaOpcjonalna")}</span>
           <input value={title} placeholder={autoTitle} onChange={(e) => setTitle(e.target.value)} maxLength={80} />
         </label>
+        {category !== "lacznosc" ? (
+          <label className="field">
+            <span>{t("form.zdjecie")}</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setPhoto(e.target.files?.[0] || null)} />
+          </label>
+        ) : null}
 
         <button type="button" className="btn ghost" onClick={() => setMore(!more)}>
           {more ? t("form.mniej") : t("form.wiecej")}

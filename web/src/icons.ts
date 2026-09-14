@@ -59,7 +59,7 @@ async function svgToBaseCanvas(url: string, size: number, pad: number): Promise<
 
 function paintRing(ctx: CanvasRenderingContext2D, size: number, readiness: IconReadiness) {
   const cx = size / 2;
-  const r = size / 2 - 4;
+  const r = size / 2 - 3;
   ctx.beginPath();
   ctx.arc(cx, cx, r, 0, Math.PI * 2);
   ctx.lineCap = "round";
@@ -76,9 +76,8 @@ function paintRing(ctx: CanvasRenderingContext2D, size: number, readiness: IconR
     ctx.lineWidth = 4;
     ctx.setLineDash([]);
   } else {
-    ctx.strokeStyle = "#1e3a5f";
-    ctx.lineWidth = 3;
-    ctx.setLineDash([]);
+    // Zweryfikowany bez dodatkowych informacji: bez pierścienia — sam kształt.
+    return;
   }
   ctx.stroke();
   ctx.setLineDash([]);
@@ -90,7 +89,7 @@ export async function addCategoryImagesToMap(map: MapLibreMap): Promise<boolean>
     const variants: IconReadiness[] = ["verified", "pending", "stale", "ok"];
     await Promise.all(
       ALL_CATEGORIES.map(async (cat) => {
-        const base = await svgToBaseCanvas(CATEGORY_ICONS[cat], MAP_ICON_PX, 8);
+        const base = await svgToBaseCanvas(CATEGORY_ICONS[cat], MAP_ICON_PX, 12);
         for (const readiness of variants) {
           const id = mapImageId(cat, readiness);
           const canvas = document.createElement("canvas");
@@ -98,8 +97,9 @@ export async function addCategoryImagesToMap(map: MapLibreMap): Promise<boolean>
           canvas.height = MAP_ICON_PX;
           const ctx = canvas.getContext("2d", { willReadFrequently: true });
           if (!ctx) throw new Error("canvas");
-          ctx.drawImage(base, 0, 0);
+          // Obwódka gotowości za kształtem: kształt mówi „co”, pierścień „w jakim stanie”.
           paintRing(ctx, MAP_ICON_PX, readiness);
+          ctx.drawImage(base, 0, 0);
           const data = ctx.getImageData(0, 0, MAP_ICON_PX, MAP_ICON_PX);
           if (map.hasImage(id)) map.removeImage(id);
           map.addImage(id, data, { pixelRatio: MAP_ICON_PIXEL_RATIO });

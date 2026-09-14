@@ -46,7 +46,13 @@
     "nawiguj": "Nawiguj",
     "zglosBlad": "Zgłoś błąd",
     "zamknij": "Zamknij",
-    "atrybucja": "© OpenStreetMap"
+    "atrybucja": "© OpenStreetMap",
+    "warstwy": "Warstwy",
+    "potrzeby": "Potrzeby",
+    "przytrzymaj": "Przytrzymaj palec na mapie, żeby zgłosić punkt w tym miejscu.",
+    "zweryfikowal": "Zweryfikował",
+    "potwierdzil": "Potwierdził",
+    "nowyPunktTu": "Zgłoś punkt w tym miejscu"
   },
   "freshness": {
     "potwierdzony": "Potwierdzony {n} {unit} temu",
@@ -158,7 +164,7 @@
     "nazwaOpcjonalna": "Nazwa (jeśli inna niż kategoria)",
     "uslugiHint": "Co jest na miejscu",
     "lacznoscOstrzezenie": "Nie podawaj dokładnej lokalizacji anteny. Publicznie pokażemy tylko gminę.",
-    "potrzebaOstrzezenie": "To zgłoszenie widzą tylko operatorzy.",
+    "potrzebaOstrzezenie": "To zgłoszenie widzą tylko zaufani sąsiedzi i OSP. Nie pokazujemy go na mapie publicznej.",
     "schronHint": "Schron / MDS: dane z inwentaryzacji PSP. Nie zrzucamy schrony.straz.gov.pl — wklej z CSV/GeoJSON.",
     "dotknijMapy": "Dotknij mapy albo wpisz współrzędne",
     "wiecej": "Więcej szczegółów",
@@ -171,7 +177,10 @@
     "capability": "Zdolności",
     "needType": "Czego potrzeba",
     "people": "Ile osób",
-    "urgency": "Pilność"
+    "urgency": "Pilność",
+    "zdjecie": "Zdjęcie (opcjonalnie, bez danych GPS)",
+    "zdjecieOffline": "Zdjęcie nie trafi do kolejki offline — dodasz je później.",
+    "zalogujPrzyZapisie": "Do zapisu potrzebne jest konto. Zachowamy to, co wpisałeś."
   },
   "need": {
     "woda": "Woda",
@@ -209,7 +218,12 @@
     "paczka": "Pobierz paczkę (USB)",
     "wczytaj": "Wczytaj paczkę",
     "invites": "Zaproszenia",
-    "nowyKod": "Nowy kod"
+    "nowyKod": "Nowy kod",
+    "dodajWezel": "Dodaj sąsiedni węzeł",
+    "adresWezla": "Adres węzła (https://…)",
+    "nodeId": "Identyfikator węzła (np. radzionkow-01)",
+    "dodano": "Węzeł dodany. Po chwili pojawi się jego klucz — porównaj odcisk przez telefon i kliknij Zaufaj.",
+    "meshOpis": "Sieć węzłów: każdy węzeł wymienia dane z sąsiadami, którym zaufasz. Węzły poznane przez sąsiadów czekają tu na Twoją decyzję."
   },
   "cap": {
     "warsztat": "Warsztat",
@@ -317,7 +331,13 @@
   },
   "print": {
     "tytul": "Wykaz punktów — wydruk A4",
-    "data": "Data wydruku"
+    "data": "Data wydruku",
+    "mapa": "Mapa gminy",
+    "drukuj": "Drukuj",
+    "qrOpis": "Zeskanuj telefonem w sieci węzła, żeby otworzyć aktualną mapę.",
+    "wywies": "Wywieś w remizie, sklepie, na tablicy parafialnej. Wydruk to kopia z dnia — sprawdź datę.",
+    "legenda": "Legenda",
+    "punkty": "Wykaz punktów"
   },
   "empty": {
     "moje": "Nie masz jeszcze zgłoszeń na tym węźle.",
@@ -326,5 +346,15 @@
   "err": {
     "ogolny": "Nie udało się wykonać operacji.",
     "siec": "Brak połączenia z węzłem."
+  },
+  "needs": {
+    "tytul": "Potrzeby sąsiadów",
+    "opis": "Widzą je zaufani sąsiedzi i OSP. Jeśli możesz pomóc, weź jedną — inni zobaczą, że jest zajęta.",
+    "brak": "Brak otwartych potrzeb w gminie.",
+    "biore": "Biorę to",
+    "oddaj": "Oddaję",
+    "zalatwione": "Załatwione",
+    "wziete": "Ktoś już to wziął",
+    "osoby": "os."
   }
 }

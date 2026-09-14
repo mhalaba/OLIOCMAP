@@ -1,13 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { MapView } from "../components/MapView";
+import { CatIcon } from "../components/CategoryBadge";
 import { t } from "../i18n";
-import { pb } from "../lib/pb";
-import type { Point } from "../types";
+import { fetchConfig, pb } from "../lib/pb";
+import { PUBLIC_CATEGORIES, type Point } from "../types";
 
+/**
+ * Wydruk A4: mapa gminy z punktami, QR do węzła, legenda i wykaz.
+ * Dla tych, którzy nie zainstalują PWA: remiza, sklep, tablica parafialna.
+ */
 export function PrintPage() {
   const [points, setPoints] = useState<Point[]>([]);
   const [qr, setQr] = useState("");
+  const [gmina, setGmina] = useState("");
   const when = new Date().toLocaleString("pl-PL");
+  const cats = useMemo(() => Object.fromEntries(PUBLIC_CATEGORIES.map((c) => [c, true])), []);
 
   useEffect(() => {
     pb.collection("points")
@@ -17,35 +25,75 @@ export function PrintPage() {
       })
       .then(setPoints)
       .catch(() => {});
+    fetchConfig()
+      .then((c) => setGmina(c.gmina || ""))
+      .catch(() => {});
     QRCode.toDataURL(window.location.origin, { margin: 1, width: 180 }).then(setQr);
   }, []);
 
+  const center = useMemo<[number, number] | undefined>(() => {
+    const xs = points.map((p) => p.public_lon ?? p.lon).filter((v): v is number => typeof v === "number" && v !== 0);
+    const ys = points.map((p) => p.public_lat ?? p.lat).filter((v): v is number => typeof v === "number" && v !== 0);
+    if (!xs.length) return undefined;
+    return [xs.reduce((a, b) => a + b, 0) / xs.length, ys.reduce((a, b) => a + b, 0) / ys.length];
+  }, [points]);
+
   return (
     <div className="page">
-      <h1>{t("print.tytul")}</h1>
-      <p>
-        {t("print.data")}: {when}
-      </p>
-      {qr ? <img src={qr} alt="Kod QR do węzła" width={180} height={180} /> : null}
-      <p>{window.location.origin}</p>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+      <div className="print-head">
+        <div>
+          <h1 style={{ margin: 0 }}>
+            {t("print.mapa")}
+            {gmina ? ` — ${gmina}` : ""}
+          </h1>
+          <p style={{ margin: "4px 0" }}>
+            {t("print.data")}: {when}
+          </p>
+          <p className="hint" style={{ margin: 0 }}>{t("print.wywies")}</p>
+          <p className="no-print" style={{ margin: "8px 0 0" }}>
+            <button type="button" className="btn primary" onClick={() => window.print()}>
+              {t("print.drukuj")}
+            </button>
+          </p>
+        </div>
+        <div style={{ textAlign: "center", fontSize: 11 }}>
+          {qr ? <img src={qr} alt="Kod QR do węzła" width={120} height={120} /> : null}
+          <div>{window.location.origin}</div>
+          <div style={{ maxWidth: 140 }}>{t("print.qrOpis")}</div>
+        </div>
+      </div>
+      <div className="print-map">
+        <MapView key={points.length ? "pts" : "empty"} points={points} cats={cats} services={[]} preserveDrawingBuffer center={center} zoom={13} />
+      </div>
+      <div className="print-legend">
+        {PUBLIC_CATEGORIES.map((c) => (
+          <span key={c}>
+            <CatIcon category={c} size={18} />
+            {t(`cat.${c}`)}
+          </span>
+        ))}
+      </div>
+      <h2 style={{ fontSize: 15, margin: "10px 0 4px" }}>{t("print.punkty")}</h2>
+      <table className="print-table">
         <thead>
           <tr>
-            <th style={{ textAlign: "left", borderBottom: "1px solid #000" }}>Nazwa</th>
-            <th style={{ textAlign: "left", borderBottom: "1px solid #000" }}>Kategoria</th>
-            <th style={{ textAlign: "left", borderBottom: "1px solid #000" }}>Adres</th>
-            <th style={{ textAlign: "left", borderBottom: "1px solid #000" }}>Godziny / aktywacja</th>
+            <th>Nazwa</th>
+            <th>Kategoria</th>
+            <th>Adres</th>
+            <th>Godziny / aktywacja</th>
+            <th>{t("map.potwierdzil")}</th>
           </tr>
         </thead>
         <tbody>
           {points.map((p) => (
             <tr key={p.id}>
-              <td style={{ borderBottom: "1px solid #ccc", padding: "6px 4px" }}>{p.title}</td>
-              <td style={{ borderBottom: "1px solid #ccc" }}>{t("cat." + p.category)}</td>
-              <td style={{ borderBottom: "1px solid #ccc" }}>{p.address}</td>
-              <td style={{ borderBottom: "1px solid #ccc" }}>
+              <td>{p.title}</td>
+              <td>{t("cat." + p.category)}</td>
+              <td>{p.address}</td>
+              <td>
                 {p.hours} {p.activation ? t("activation." + p.activation) : ""} {p.activation_hours ? `(${p.activation_hours} h)` : ""}
               </td>
+              <td>{p.confirmed_by_name || p.verified_by_name || ""}</td>
             </tr>
           ))}
         </tbody>

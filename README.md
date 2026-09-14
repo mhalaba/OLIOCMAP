@@ -45,6 +45,10 @@ albo `PEERS=[{"node_id":"central-01","base_url":"http://central-caddy"}]`.
 
 Centrala nie loguje użytkowników innych węzłów. Użytkownicy są zawsze lokalni.
 
+## Sieć węzłów (mesh)
+
+Węzły łączą się między sobą bez centrali: operator dodaje sąsiada na `/operator/wezly` (adres + identyfikator), porównuje odcisk klucza przez telefon lub radio i klika **Zaufaj**. Zaufani sąsiedzi ogłaszają sobie nawzajem katalog znanych węzłów (klucze, adresy), a zweryfikowane punkty wędrują przez pośredników z podpisem węzła źródłowego. Szczegóły, model zaufania i co NIE wędruje: [docs/mesh.md](docs/mesh.md).
+
 ## Jak działa awaria
 
 1. Zatrzymaj centralę albo sieć (`scripts/chaos.sh down-central`).

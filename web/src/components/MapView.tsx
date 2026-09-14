@@ -48,6 +48,12 @@ type Props = {
   intervalDays?: number;
   focusPoint?: Point | null;
   focusSeq?: number;
+  /** Przytrzymanie palca (~600 ms) albo prawy klik: szybkie zgłoszenie w tym miejscu. */
+  onLongPress?: (lat: number, lon: number) => void;
+  /** Wydruk: MapLibre musi zachować bufor, żeby canvas trafił na papier. */
+  preserveDrawingBuffer?: boolean;
+  center?: [number, number];
+  zoom?: number;
 };
 
 function toFeatures(points: Point[], cats: Record<string, boolean>, services: Service[], intervalDays: number) {
@@ -93,6 +99,8 @@ function toFeatures(points: Point[], cats: Record<string, boolean>, services: Se
         capability: caps.join(","),
         source_node: p.source_node || "",
         fresh: fresh.text,
+        verified_by: p.verified_by_name || "",
+        confirmed_by: p.confirmed_by_name || "",
         address: p.address || "",
         capacity: p.capacity || 0,
         host_type: p.host_type || "",
@@ -129,6 +137,7 @@ function popupHtml(props: Record<string, unknown>): string {
     <span class="cat-badge" style="background:${color};color:${ink}"><img class="cat-icon" src="${icon}" alt="" width="18" height="18">${t("cat." + cat)}</span>
     <h3>${escapeHtml(String(props.title || ""))}</h3>
     ${pending ? `<div class="stale">${escapeHtml(t("status.pending"))}</div>` : `<div class="${stale ? "stale" : "fresh"}">${escapeHtml(String(props.fresh || ""))}</div>`}
+    ${props.confirmed_by ? `<div class="who">${escapeHtml(t("map.potwierdzil"))}: ${escapeHtml(String(props.confirmed_by))}</div>` : props.verified_by ? `<div class="who">${escapeHtml(t("map.zweryfikowal"))}: ${escapeHtml(String(props.verified_by))}</div>` : ""}
     ${props.activation ? `<div>${escapeHtml(String(props.activation))}</div>` : ""}
     ${props.hours ? `<div>${escapeHtml(String(props.hours))}</div>` : ""}
     ${auto ? `<div>${auto}</div>` : ""}
@@ -285,7 +294,16 @@ function addPointLayers(map: Map, iconsOk: boolean) {
           ["concat", "cat-", ["get", "category"], "-ok"],
           ["concat", "cat-", ["get", "category"]],
         ],
-        "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.85, 14, 1],
+        // AED jest najliczniejsze (import OpenAEDMap) — mniejsze, żeby nie tapetowało mapy.
+        "icon-size": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          11,
+          ["match", ["get", "category"], "aed", 0.55, 0.85],
+          14,
+          ["match", ["get", "category"], "aed", 0.78, 1],
+        ],
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
         "icon-anchor": "center",
@@ -391,7 +409,13 @@ export function MapView({
   intervalDays = 14,
   focusPoint = null,
   focusSeq = 0,
+  onLongPress,
+  preserveDrawingBuffer = false,
+  center,
+  zoom,
 }: Props) {
+  const onLongPressRef = useRef(onLongPress);
+  onLongPressRef.current = onLongPress;
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -588,8 +612,9 @@ export function MapView({
       const map = new maplibregl.Map({
         container: ref.current,
         style,
-        center: BYTOM,
-        zoom: 12,
+        center: center || BYTOM,
+        zoom: zoom ?? 12,
+        preserveDrawingBuffer,
         minZoom: POLAND_MIN_ZOOM,
         maxZoom: POLAND_MAX_ZOOM,
         maxBounds: POLAND_MAX_BOUNDS,
@@ -661,6 +686,47 @@ export function MapView({
       map.on("click", (e) => {
         if (pickMode && onPick) onPick(e.lngLat.lat, e.lngLat.lng);
       });
+      // Długie przytrzymanie / prawy klik → szybkie zgłoszenie w tym miejscu.
+      map.on("contextmenu", (e) => {
+        e.preventDefault();
+        if (!pickModeRef.current) onLongPressRef.current?.(e.lngLat.lat, e.lngLat.lng);
+      });
+      {
+        let timer = 0;
+        let start: { x: number; y: number } | null = null;
+        const canvas = map.getCanvasContainer();
+        const cancel = () => {
+          if (timer) window.clearTimeout(timer);
+          timer = 0;
+          start = null;
+        };
+        canvas.addEventListener(
+          "touchstart",
+          (ev) => {
+            if (ev.touches.length !== 1 || pickModeRef.current) return cancel();
+            const tch = ev.touches[0];
+            start = { x: tch.clientX, y: tch.clientY };
+            timer = window.setTimeout(() => {
+              const rect = canvas.getBoundingClientRect();
+              const ll = map.unproject([tch.clientX - rect.left, tch.clientY - rect.top]);
+              cancel();
+              onLongPressRef.current?.(ll.lat, ll.lng);
+            }, 600);
+          },
+          { passive: true }
+        );
+        canvas.addEventListener(
+          "touchmove",
+          (ev) => {
+            if (!start) return;
+            const tch = ev.touches[0];
+            if (Math.hypot(tch.clientX - start.x, tch.clientY - start.y) > 10) cancel();
+          },
+          { passive: true }
+        );
+        canvas.addEventListener("touchend", cancel, { passive: true });
+        canvas.addEventListener("touchcancel", cancel, { passive: true });
+      }
       if (pickMode && onPick) {
         map.on("moveend", () => {
           const c = map.getCenter();

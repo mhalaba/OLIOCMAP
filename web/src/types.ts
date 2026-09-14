@@ -78,6 +78,8 @@ export interface Point {
   created_by?: string;
   reporter_role?: Role;
   verified_by_node?: string;
+  verified_by_name?: string;
+  confirmed_by_name?: string;
   verified_at?: string;
   last_confirmed_at?: string;
   confirm_interval_days?: number;

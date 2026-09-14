@@ -29,6 +29,12 @@ export const cfg = {
   pmtilesSource: env("PMTILES_SOURCE", "auto"),
   pmtilesBin: env("PMTILES_BIN", "pmtiles"),
   tilesAgentSock: env("TILES_AGENT_SOCK", "/tiles/agent.sock"),
+  /** Mesh: przekazuj dalej zweryfikowane wiersze innych węzłów (relay), nie tylko własne. */
+  meshRelay: env("MESH_RELAY", "1") !== "0",
+  /** Mesh: ucz się węzłów z katalogu zaufanych sąsiadów (klucze do weryfikacji podpisów, adresy). */
+  meshDirectory: env("MESH_DIRECTORY", "1") !== "0",
+  /** Adres, pod którym sąsiedzi widzą ten węzeł (ogłaszany w katalogu). */
+  publicUrl: env("PUBLIC_URL", ""),
 };
 
 export function parsePeersEnv() {

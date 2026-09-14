@@ -14,7 +14,27 @@ var SYNC_FIELDS = [
   "hours", "opening_hours", "contact_public", "consent", "civilians_ok", "verified_by_node",
   "verified_at", "last_confirmed_at", "confirm_interval_days", "expires_at", "ttl_purged",
   "external_ref", "need_type", "people", "urgency", "resolved_at", "deleted_at", "photo_sha256",
+  "verified_by_name", "confirmed_by_name",
 ];
+
+/** „J.K., OSP Szombierki” — inicjały + organizacja. Nazwisko nie wychodzi na mapę. */
+function signerLabel(auth) {
+  if (!auth) return "";
+  var name = String(auth.get("name") || "").trim();
+  var org = String(auth.get("org_name") || "").trim();
+  var initials = name
+    .split(/\s+/)
+    .filter(function (w) { return w; })
+    .slice(0, 2)
+    .map(function (w) { return w.charAt(0).toUpperCase() + "."; })
+    .join("");
+  if (initials && org) return initials + ", " + org;
+  return initials || org;
+}
+
+function isTrusted(auth) {
+  return !!auth && auth.get("role") === "zaufany";
+}
 
 function nodeId() {
   return env.get("NODE_ID", "bytom-01");
@@ -146,6 +166,8 @@ module.exports.create = function(e) {
     rec.set("status", auto ? "verified" : "pending");
     if (auto) {
       rec.set("verified_by_node", nodeId());
+      rec.set("verified_by_name", signerLabel(e.auth));
+      rec.set("confirmed_by_name", signerLabel(e.auth));
       rec.set("verified_at", new DateTime());
       rec.set("last_confirmed_at", new DateTime());
     }
@@ -242,6 +264,8 @@ module.exports.update = function(e) {
       } else if (newStatus === "verified" || newStatus === "rejected") {
         if (newStatus === "verified") {
           rec.set("verified_by_node", nodeId());
+          rec.set("verified_by_name", signerLabel(e.auth));
+          rec.set("confirmed_by_name", signerLabel(e.auth));
           rec.set("verified_at", new DateTime());
           rec.set("last_confirmed_at", new DateTime());
         }
@@ -251,6 +275,32 @@ module.exports.update = function(e) {
 
     if (orig.get("status") === "pending" && !isOperator(e.auth)) {
       rec.set("status", "pending");
+    }
+
+    // Zaufany sąsiad na potrzebie może tylko: wziąć ją (assigned_to = on), oddać, zamknąć swoją.
+    if (!isOperator(e.auth) && orig.get("category") === "potrzeba" && !(orig.get("created_by") === (e.auth ? e.auth.id : "-"))) {
+      if (!isTrusted(e.auth)) throw new ForbiddenError("Brak uprawnień.");
+      var me = e.auth.id;
+      var wantAssign = rec.get("assigned_to");
+      var hadAssign = orig.get("assigned_to");
+      var wantResolved = rec.get("resolved_at");
+      var wantStatus = rec.get("status");
+      for (var k = 0; k < SYNC_FIELDS.length; k++) {
+        var fld = SYNC_FIELDS[k];
+        if (fld === "resolved_at" || fld === "status") continue;
+        rec.set(fld, orig.get(fld));
+      }
+      rec.set("assigned_to", hadAssign);
+      if (wantAssign === me && (!hadAssign || hadAssign === me)) rec.set("assigned_to", me);
+      else if (!wantAssign && hadAssign === me) rec.set("assigned_to", "");
+      var mine = orig.get("assigned_to") === me || rec.get("assigned_to") === me;
+      if (!mine) {
+        rec.set("resolved_at", orig.get("resolved_at"));
+        rec.set("status", orig.get("status"));
+      } else {
+        if (wantStatus !== "expired" && wantStatus !== orig.get("status")) rec.set("status", orig.get("status"));
+        if (String(wantResolved) !== String(orig.get("resolved_at"))) rec.set("resolved_at", wantResolved);
+      }
     }
 
     var deny = denylist.checkDenylist(rec.get("title"), rec.get("description"), rec.get("category"), rec.get("host_type"));
@@ -286,6 +336,9 @@ module.exports.update = function(e) {
     var lastConf = rec.get("last_confirmed_at");
     var origConf = orig.get("last_confirmed_at");
     if (String(lastConf) !== String(origConf) && isOperator(e.auth)) {
+      rec.set("confirmed_by_name", signerLabel(e.auth));
+      fh.confirmed_by_name = h;
+      rec.set("field_hlc", fh);
       writeAudit(e.app, e.auth.id, "confirm", rec.id, {}, {});
     }
   }
@@ -320,12 +373,14 @@ module.exports.enrich = function(e) {
   var auth = info ? info.auth : null;
   var superuser = info && info.hasSuperuserAuth && info.hasSuperuserAuth();
   var op = superuser || (auth && (auth.get("role") === "operator" || auth.get("role") === "admin"));
+  var trusted = auth && auth.get("role") === "zaufany";
   if (!op) {
     rec.hide("contact_operator");
     rec.hide("created_by");
     rec.hide("lat");
     rec.hide("lon");
-    rec.hide("assigned_to");
+    // Zaufany widzi, kto wziął potrzebę (żeby nie brać dwa razy).
+    if (!(trusted && rec.get("category") === "potrzeba")) rec.hide("assigned_to");
     rec.hide("field_hlc");
     if (rec.get("public_geom") !== "precise") {
       /* public_lat/lon already rounded */
