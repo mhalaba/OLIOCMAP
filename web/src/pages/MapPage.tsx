@@ -214,6 +214,7 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
                     onClick={() => {
                       setFocusPoint(h);
                       setFocusSeq((n) => n + 1);
+                      setQ("");
                     }}
                   >
                     <CatIcon category={h.category} size={22} />
