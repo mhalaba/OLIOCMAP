@@ -5,11 +5,13 @@ export function LocateControl({
   autoEnabled,
   onLocate,
   onAutoChange,
+  showAuto = true,
 }: {
   locating: boolean;
   autoEnabled: boolean;
   onLocate: () => void;
   onAutoChange: (on: boolean) => void;
+  showAuto?: boolean;
 }) {
   return (
     <div className="oc-locate-stack">
@@ -34,10 +36,12 @@ export function LocateControl({
           />
         </svg>
       </button>
-      <label className={`oc-auto-locate${autoEnabled ? " on" : ""}`}>
-        <input type="checkbox" checked={autoEnabled} onChange={(e) => onAutoChange(e.target.checked)} />
-        {t("map.automatycznaLokalizacja")}
-      </label>
+      {showAuto ? (
+        <label className={`oc-auto-locate${autoEnabled ? " on" : ""}`}>
+          <input type="checkbox" checked={autoEnabled} onChange={(e) => onAutoChange(e.target.checked)} />
+          {t("map.automatycznaLokalizacja")}
+        </label>
+      ) : null}
     </div>
   );
 }

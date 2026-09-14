@@ -41,6 +41,8 @@ type Props = {
   onPick?: (lat: number, lon: number) => void;
   onTilesMissing?: (missing: boolean, onlineFallback: boolean) => void;
   intervalDays?: number;
+  focusPoint?: Point | null;
+  focusSeq?: number;
 };
 
 function toFeatures(points: Point[], cats: Record<string, boolean>, services: Service[], intervalDays: number) {
@@ -373,7 +375,17 @@ function addPolandMask(map: Map) {
   });
 }
 
-export function MapView({ points, cats, services, pickMode, onPick, onTilesMissing, intervalDays = 14 }: Props) {
+export function MapView({
+  points,
+  cats,
+  services,
+  pickMode,
+  onPick,
+  onTilesMissing,
+  intervalDays = 14,
+  focusPoint = null,
+  focusSeq = 0,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -388,6 +400,7 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
   const [autoLocate, setAutoLocate] = useState(getAutoLocate);
   const [locating, setLocating] = useState(false);
   const [geoMsg, setGeoMsg] = useState("");
+  const popupRef = useRef<maplibregl.Popup | null>(null);
 
   function applyPosition(map: Map, pos: GeoOk) {
     try {
@@ -654,6 +667,32 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
   }, [points, cats, services, intervalDays]);
 
   useEffect(() => {
+    if (!focusSeq || !focusPoint) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const lat = focusPoint.public_lat ?? focusPoint.lat;
+    const lon = focusPoint.public_lon ?? focusPoint.lon;
+    if (lat == null || lon == null || !inPolandBounds(lon, lat)) return;
+    const feat = dataRef.current.features.find((f) => String((f.properties as { id?: string } | null)?.id) === focusPoint.id);
+    const html = feat
+      ? popupHtml(feat.properties as Record<string, unknown>)
+      : `<div class="popup"><h3>${escapeHtml(focusPoint.title || "")}</h3></div>`;
+    const open = () => {
+      const m = mapRef.current;
+      if (!m) return;
+      popupRef.current?.remove();
+      popupRef.current = new maplibregl.Popup({ maxWidth: "280px" }).setLngLat([lon, lat]).setHTML(html).addTo(m);
+      try {
+        m.easeTo({ center: [lon, lat], zoom: Math.max(m.getZoom() || 12, 14), duration: 700 });
+      } catch {
+        /* maxBounds */
+      }
+    };
+    if (map.isStyleLoaded()) open();
+    else map.once("load", open);
+  }, [focusPoint, focusSeq]);
+
+  useEffect(() => {
     if (!geoMsg) return;
     const id = window.setTimeout(() => setGeoMsg(""), 5000);
     return () => window.clearTimeout(id);
@@ -665,6 +704,7 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
       <LocateControl
         locating={locating}
         autoEnabled={autoLocate}
+        showAuto={!pickMode}
         onLocate={() => void locateFnRef.current("user")}
         onAutoChange={(on) => {
           setAutoLocate(on);

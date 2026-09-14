@@ -110,6 +110,41 @@ a { color: var(--navy); }
   background: var(--paper);
   box-shadow: var(--shadow);
 }
+.search-box { position: relative; }
+.search-hits {
+  margin: 6px 0 0;
+  padding: 4px;
+  max-height: min(40vh, 280px);
+  overflow: auto;
+}
+.search-hit {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-weight: 700;
+}
+.search-hit:hover, .search-hit:focus-visible { background: var(--bg); }
+.search-hit span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.search-hit-meta {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted);
+}
+.search-empty {
+  margin: 0;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
 
 .chips {
   display: flex;

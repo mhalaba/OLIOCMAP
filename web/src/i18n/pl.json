@@ -21,7 +21,8 @@
     "offlineHttps": "Tryb offline wymaga HTTPS — patrz instrukcja."
   },
   "map": {
-    "szukaj": "Szukaj punktu",
+    "szukaj": "Szukaj punktów…",
+    "szukajBrak": "Nie znaleziono punktów o tej nazwie.",
     "legenda": "Legenda",
     "filtry": "Filtry",
     "uslugiFiltr": "Usługi na punkcie",

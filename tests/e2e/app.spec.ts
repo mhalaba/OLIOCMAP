@@ -17,7 +17,7 @@ async function login(page: Page, email: string, password = "demo12345") {
 async function addPoint(page: Page, category: string) {
   await page.goto("/dodaj");
   await page.getByRole("button", { name: category }).first().click();
-  await page.getByRole("checkbox").check();
+  await page.getByRole("checkbox", { name: /Zgadzam się/ }).check();
   await page.getByRole("button", { name: "Zapisz" }).click();
 }
 
@@ -94,7 +94,7 @@ test("5. offline: powłoka i kolejka zapisu", async ({ page, context }) => {
   await page.goto("/dodaj");
   await context.setOffline(true);
   await page.getByRole("button", { name: "AED" }).click();
-  await page.getByRole("checkbox").check();
+  await page.getByRole("checkbox", { name: /Zgadzam się/ }).check();
   await page.getByRole("button", { name: "Zapisz" }).click();
   await expect(page.getByText(/Zapisano na telefonie/)).toBeVisible({ timeout: 15000 });
   await context.setOffline(false);
