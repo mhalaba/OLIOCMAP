@@ -1,9 +1,20 @@
-import { useEffect, useRef } from "react";
-import maplibregl, { type Map, type GeoJSONSource } from "maplibre-gl";
+import { useEffect, useRef, useState } from "react";
+import maplibregl, { type Map, type GeoJSONSource, type Marker } from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { LocateControl } from "./LocateControl";
 import { t } from "../i18n";
 import { addCategoryImagesToMap, categoryIconSrc, mapImageId } from "../icons";
+import {
+  getAutoLocate,
+  getPosition,
+  queryGeoPermission,
+  setAutoLocatePref,
+  shouldAutoLocateOnOpen,
+  wasGeoDenied,
+  type GeoFail,
+  type GeoOk,
+} from "../lib/geolocation";
 import { CATEGORY_COLORS, type Category, type Point, type Service } from "../types";
 import { activationText, freshnessLabel, isPresentDate } from "../lib/format";
 import { asArray } from "../lib/pb";
@@ -286,11 +297,154 @@ function addPointLayers(map: Map, iconsOk: boolean) {
   }
 }
 
+function accuracyPolygon(lng: number, lat: number, radiusM: number): GeoJSON.Polygon {
+  const n = 64;
+  const coords: [number, number][] = [];
+  const latRad = (lat * Math.PI) / 180;
+  const dLat = radiusM / 110574;
+  const dLng = radiusM / (111320 * Math.max(Math.cos(latRad), 0.01));
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * 2 * Math.PI;
+    coords.push([lng + dLng * Math.cos(a), lat + dLat * Math.sin(a)]);
+  }
+  return { type: "Polygon", coordinates: [coords] };
+}
+
+function ensureUserLocLayers(map: Map) {
+  if (!map.getSource("user-loc")) {
+    map.addSource("user-loc", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getLayer("user-accuracy")) {
+    map.addLayer({
+      id: "user-accuracy",
+      type: "fill",
+      source: "user-loc",
+      paint: { "fill-color": OC_NAVY, "fill-opacity": 0.14 },
+    });
+  }
+  if (!map.getLayer("user-accuracy-outline")) {
+    map.addLayer({
+      id: "user-accuracy-outline",
+      type: "line",
+      source: "user-loc",
+      paint: { "line-color": OC_NAVY, "line-width": 1.5, "line-opacity": 0.5 },
+    });
+  }
+}
+
+function makeUserMarkerEl(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "oc-user-marker";
+  el.setAttribute("role", "img");
+  el.setAttribute("aria-label", t("map.mojaLokalizacja"));
+  const pulse = document.createElement("span");
+  pulse.className = "oc-user-marker-pulse";
+  const dot = document.createElement("span");
+  dot.className = "oc-user-marker-dot";
+  el.append(pulse, dot);
+  return el;
+}
+
+function geoMessage(reason: GeoFail["reason"]): string {
+  if (reason === "unsupported") return t("map.geoBrak");
+  if (reason === "denied") return t("map.geoOdmowa");
+  return t("map.geoNiedostepna");
+}
+
 export function MapView({ points, cats, services, pickMode, onPick, onTilesMissing, intervalDays = 14 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
+  const markerRef = useRef<Marker | null>(null);
+  const onPickRef = useRef(onPick);
+  onPickRef.current = onPick;
+  const pickModeRef = useRef(!!pickMode);
+  pickModeRef.current = !!pickMode;
+  const locateFnRef = useRef<(source: "auto" | "user") => Promise<void>>(async () => {});
+  const pendingLocateRef = useRef<"auto" | "user" | null>(null);
   const dataRef = useRef(toFeatures(points, cats, services, intervalDays));
   dataRef.current = toFeatures(points, cats, services, intervalDays);
+  const [autoLocate, setAutoLocate] = useState(getAutoLocate);
+  const [locating, setLocating] = useState(false);
+  const [geoMsg, setGeoMsg] = useState("");
+
+  function applyPosition(map: Map, pos: GeoOk) {
+    try {
+      ensureUserLocLayers(map);
+    } catch {
+      /* styl jeszcze niegotowy */
+    }
+    const radius = Math.min(Math.max(pos.accuracy || 40, 20), 4000);
+    const src = map.getSource("user-loc") as GeoJSONSource | undefined;
+    src?.setData({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: accuracyPolygon(pos.lng, pos.lat, radius),
+        },
+      ],
+    });
+    if (!markerRef.current) {
+      markerRef.current = new maplibregl.Marker({ element: makeUserMarkerEl(), anchor: "center" })
+        .setLngLat([pos.lng, pos.lat])
+        .addTo(map);
+    } else {
+      markerRef.current.setLngLat([pos.lng, pos.lat]);
+    }
+    const latRad = (pos.lat * Math.PI) / 180;
+    const dLat = radius / 110574;
+    const dLng = radius / (111320 * Math.max(Math.cos(latRad), 0.01));
+    map.fitBounds(
+      [
+        [pos.lng - dLng, pos.lat - dLat],
+        [pos.lng + dLng, pos.lat + dLat],
+      ],
+      { padding: 48, maxZoom: 16, duration: 850 }
+    );
+    if (pickModeRef.current) onPickRef.current?.(pos.lat, pos.lng);
+  }
+
+  locateFnRef.current = async (source) => {
+    const map = mapRef.current;
+    if (!map) {
+      pendingLocateRef.current = source;
+      return;
+    }
+    if (source === "auto") {
+      if (!getAutoLocate()) return;
+      const perm = await queryGeoPermission();
+      if (perm === "denied") return;
+      if (wasGeoDenied() && perm !== "granted") return;
+    }
+    setLocating(true);
+    if (source === "user") setGeoMsg(t("map.geoSzukam"));
+    try {
+      const result = await getPosition(
+        source === "auto" ? { enableHighAccuracy: false, maximumAge: 60000, timeout: 8000 } : undefined
+      );
+      if (!mapRef.current) return;
+      if (result.ok) {
+        setGeoMsg("");
+        const go = () => {
+          if (mapRef.current) applyPosition(mapRef.current, result);
+        };
+        if (map.isStyleLoaded()) go();
+        else map.once("load", go);
+      } else {
+        setGeoMsg(geoMessage(result.reason));
+        if (result.reason === "denied") {
+          setAutoLocate(false);
+          setAutoLocatePref(false);
+        }
+      }
+    } finally {
+      setLocating(false);
+    }
+  };
 
   useEffect(() => {
     if (!ref.current) return;
@@ -401,6 +555,7 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
               map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });
             });
           });
+          if (shouldAutoLocateOnOpen()) void locateFnRef.current("auto");
         })();
       });
       map.on("click", (e) => {
@@ -413,9 +568,15 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
         });
       }
       mapRef.current = map;
+      if (pendingLocateRef.current) {
+        const queued = pendingLocateRef.current;
+        pendingLocateRef.current = null;
+        void locateFnRef.current(queued);
+      }
     })();
     return () => {
       cancelled = true;
+      markerRef.current = null;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -429,5 +590,30 @@ export function MapView({ points, cats, services, pickMode, onPick, onTilesMissi
     (map.getSource("points") as GeoJSONSource).setData(dataRef.current);
   }, [points, cats, services, intervalDays]);
 
-  return <div className="map-el" ref={ref} />;
+  useEffect(() => {
+    if (!geoMsg) return;
+    const id = window.setTimeout(() => setGeoMsg(""), 5000);
+    return () => window.clearTimeout(id);
+  }, [geoMsg]);
+
+  return (
+    <>
+      <div className="map-el" ref={ref} />
+      <LocateControl
+        locating={locating}
+        autoEnabled={autoLocate}
+        onLocate={() => void locateFnRef.current("user")}
+        onAutoChange={(on) => {
+          setAutoLocate(on);
+          setAutoLocatePref(on);
+          if (on) void locateFnRef.current("user");
+        }}
+      />
+      {geoMsg ? (
+        <div className="geo-toast" role="status">
+          {geoMsg}
+        </div>
+      ) : null}
+    </>
+  );
 }
