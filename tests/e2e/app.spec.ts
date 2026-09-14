@@ -180,7 +180,11 @@ test("9. brak angielskich etykiet UI", async ({ request }) => {
   const assets = [...html.matchAll(/\/assets\/[^"]+\.js/g)].map((m) => m[0]);
   for (const a of assets.slice(0, 8)) {
     const js = await request.get(a).then((r) => r.text());
-    const scan = js.replace(/type=["']submit["']/g, "").replace(/Ye\("Error",Error\)/g, "");
+    // maplibre rejestruje klasy do transferu do workera: `<minifikowana nazwa>("Error", Error)`.
+    // Nazwa zmienia się przy każdej zmianie bundla, więc dopasowujemy wzorzec, nie konkretny identyfikator.
+    const scan = js
+      .replace(/type=["']submit["']/g, "")
+      .replace(/[A-Za-z_$][\w$]*\(\s*["']Error["']\s*,\s*Error\s*\)/g, "");
     for (const w of forbidden) {
       const re = new RegExp(`["'>]${w}["'<]`);
       expect(re.test(scan), `${w} in ${a}`).toBeFalsy();
