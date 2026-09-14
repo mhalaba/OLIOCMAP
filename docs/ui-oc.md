@@ -38,6 +38,8 @@ Kolory plakietek: `CATEGORY_COLORS` w `web/src/types.ts`.
 
 Klastry zostają kółkami w granacie OC (`#1e3a5f`); plik `cluster.svg` jest wzorcem, nie jest wpinany jako `icon-image`.
 
+Podgląd bez bazy: `/?demo=1` dokłada kilka punktów (ikony + skupisko AED do sprawdzenia klastrów po oddaleniu).
+
 ## Obwódka gotowości
 
 Rysowana na rastrze ikony (MapLibre 4 nie ma kreskowanego `circle-stroke`):

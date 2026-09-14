@@ -385,6 +385,8 @@ a { color: var(--navy); }
   padding: 8px 10px;
   box-shadow: var(--shadow);
   font-size: 13px;
+  max-height: min(48vh, 440px);
+  overflow: auto;
 }
 .legend summary { min-height: 44px; display: flex; align-items: center; font-weight: 800; cursor: pointer; }
 .legend li { display: flex; align-items: center; gap: 8px; margin: 6px 0; }

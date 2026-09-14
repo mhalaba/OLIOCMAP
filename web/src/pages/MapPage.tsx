@@ -5,7 +5,7 @@ import { Legend } from "../components/Legend";
 import { MapView } from "../components/MapView";
 import { t } from "../i18n";
 import { currentUser, isOperator, pb } from "../lib/pb";
-import { DEFAULT_CATEGORY_ON, type Category, type Point, type Service } from "../types";
+import { DEFAULT_CATEGORY_ON, PUBLIC_CATEGORIES, type Category, type Point, type Service } from "../types";
 
 function mergeById(base: Point[], extra: Point[]): Point[] {
   const map = new Map<string, Point>();
@@ -14,6 +14,29 @@ function mergeById(base: Point[], extra: Point[]): Point[] {
     if (!map.has(p.id)) map.set(p.id, p);
   }
   return [...map.values()];
+}
+
+function demoOcPoints(): Point[] {
+  const now = new Date().toISOString();
+  const spread: Point[] = [
+    { id: "demo-odpornosc", category: "odpornosc", title: "OSP Szombierki", status: "verified", public_lat: 50.348, public_lon: 18.923, last_confirmed_at: now, autonomy_h: 48 },
+    { id: "demo-schron", category: "schron", title: "Schron przy rynku", status: "verified", public_lat: 50.351, public_lon: 18.929, last_confirmed_at: now },
+    { id: "demo-aed", category: "aed", title: "AED — urząd", status: "verified", public_lat: 50.346, public_lon: 18.918, last_confirmed_at: now },
+    { id: "demo-woda", category: "woda", title: "Punkt wody", status: "pending", public_lat: 50.353, public_lon: 18.921 },
+    { id: "demo-prad", category: "prad", title: "Ładowanie przy szkole", status: "verified", public_lat: 50.344, public_lon: 18.927, last_confirmed_at: "2020-01-01T00:00:00Z" },
+    { id: "demo-lacznosc", category: "lacznosc", title: "Starlink OSP", status: "verified", public_lat: 50.349, public_lon: 18.934, last_confirmed_at: now },
+    { id: "demo-przemysl", category: "przemysl", title: "Warsztat gminy", status: "verified", public_lat: 50.342, public_lon: 18.914, last_confirmed_at: now, capability: ["warsztat"] },
+  ];
+  const cluster: Point[] = Array.from({ length: 16 }, (_, i) => ({
+    id: `demo-aed-k${i}`,
+    category: "aed" as const,
+    title: `AED skupisko ${i + 1}`,
+    status: "verified" as const,
+    public_lat: 50.356 + (i % 4) * 0.0002,
+    public_lon: 18.908 + Math.floor(i / 4) * 0.0002,
+    last_confirmed_at: now,
+  }));
+  return [...spread, ...cluster];
 }
 
 export function MapPage({ intervalDays }: { intervalDays: number }) {
@@ -66,8 +89,14 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
         }
       }
       if (!live) return;
+      const demo = new URLSearchParams(window.location.search).has("demo");
+      if (demo) {
+        setCats(Object.fromEntries(PUBLIC_CATEGORIES.map((c) => [c, true])));
+        setPoints(mergeById(feedPoints, extra.concat(demoOcPoints())));
+      } else {
+        setPoints(mergeById(feedPoints, extra));
+      }
       setPendingMine(extra.length);
-      setPoints(mergeById(feedPoints, extra));
     })();
     return () => {
       live = false;
