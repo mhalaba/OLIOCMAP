@@ -15,7 +15,7 @@ Plik: `web/public/style.json`. Fallback tych samych kolorów jest w `web/src/com
 | wypełnienie dróg | `#ffffff` |
 | etykiety | `#0f2744` + halo `#e8eef4` |
 
-Glify (Noto Sans Regular / Medium) leżą lokalnie w `web/public/glyphs/{fontstack}/{range}.pbf`. URL w stylu:
+Glify (tylko Noto Sans Regular — inne kroje są mapowane na Regular przez `lib/glyphs.ts`) leżą lokalnie w `web/public/glyphs/{fontstack}/{range}.pbf`. URL w stylu:
 
 ```json
 "glyphs": "/glyphs/{fontstack}/{range}.pbf"
@@ -25,7 +25,7 @@ Warstwy `road-labels` i `place-labels` muszą zostać. Po zmianie kolorów spraw
 
 ## Znaczniki kategorii
 
-Źródło: `web/public/icons/map/<kategoria>.svg` (okrągła plakietka, kreska ~2–2.5 px).
+Źródło: `web/public/icons/map/<kategoria>.svg`. Każda kategoria ma **własny kształt** (tarcza, bunkier, serce, kropla, bateria, romb, nakrętka, dymek) — nie jedną okrągłą plakietkę; kreska ~2 px, obrys `#0f2744`.
 
 Ścieżki eksportuje `CATEGORY_ICONS` w `web/src/icons.ts`. Te same pliki idą do:
 
@@ -47,7 +47,9 @@ Rysowana na rastrze ikony (MapLibre 4 nie ma kreskowanego `circle-stroke`):
 - `pending` — niższa przezroczystość + kreskowana obwódka granatowa,
 - `stale` — bursztynowa obwódka,
 - `readiness=ok` gdy `autonomy_h >= 24` — zielona obwódka,
-- pozostałe zweryfikowane — cienka obwódka granatowa.
+- pozostałe zweryfikowane — bez obwódki (sam kształt).
+
+Obwódka jest rysowana **za** kształtem (`icons.ts`), więc działa z każdą sylwetką.
 
 ## Chrome UI
 
