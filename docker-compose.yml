@@ -1,0 +1,295 @@
+x-node-env: &node-env
+  NODE_ID: ${NODE_ID:-bytom-01}
+  NODE_ROLE: ${NODE_ROLE:-node}
+  NODE_NAME: ${NODE_NAME:-OSP Bytom-Szombierki}
+  NODE_GMINA_TERYT: ${NODE_GMINA_TERYT:-2462011}
+  NODE_GMINA_NAME: ${NODE_GMINA_NAME:-Bytom}
+  NODE_OPERATOR_NAME: ${NODE_OPERATOR_NAME:-OSP Bytom-Szombierki}
+  PEERS: ${PEERS:-}
+  CENTRAL_URL: ${CENTRAL_URL:-}
+  SYNC_INTERVAL_S: ${SYNC_INTERVAL_S:-30}
+  PUBLIC_GEOM_MODE: ${PUBLIC_GEOM_MODE:-gmina}
+  REGISTRATION_MODE: ${REGISTRATION_MODE:-open}
+  AUTO_VERIFY_TRUSTED: ${AUTO_VERIFY_TRUSTED:-false}
+  POTRZEBA_TTL_H: ${POTRZEBA_TTL_H:-72}
+  CONFIRM_INTERVAL_DAYS: ${CONFIRM_INTERVAL_DAYS:-14}
+  TLS_MODE: ${TLS_MODE:-off}
+  TLS_CERT_FILE: ${TLS_CERT_FILE:-}
+  TLS_KEY_FILE: ${TLS_KEY_FILE:-}
+  PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:-admin@node.local}
+  PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:-change-me}
+  SYNC_SUPERUSER_EMAIL: ${SYNC_SUPERUSER_EMAIL:-sync@node.local}
+  SYNC_SUPERUSER_PASSWORD: ${SYNC_SUPERUSER_PASSWORD:-change-me-too}
+  APP_VERSION: ${APP_VERSION:-0.1.0}
+  AED_IMPORT: ${AED_IMPORT:-bundled}
+  AED_BBOX: ${AED_BBOX:-}
+  AED_BUNDLE_PATH: ${AED_BUNDLE_PATH:-/app/data/openaedmap-pl.geojson.gz}
+  TILES_DIR: ${TILES_DIR:-/tiles}
+  TILES_BBOX: ${TILES_BBOX:-18.82,50.30,18.98,50.42}
+  TILES_MAXZOOM: ${TILES_MAXZOOM:-14}
+  PMTILES_SOURCE: ${PMTILES_SOURCE:-auto}
+  TILES_AGENT_SOCK: ${TILES_AGENT_SOCK:-/tiles/agent.sock}
+
+x-central-env: &central-env
+  NODE_ID: central-01
+  NODE_ROLE: central
+  NODE_NAME: Centrala
+  NODE_GMINA_TERYT: "0000000"
+  NODE_GMINA_NAME: Polska
+  NODE_OPERATOR_NAME: Centrala Mapa Kryzysowa
+  PEERS: ""
+  CENTRAL_URL: ""
+  SYNC_INTERVAL_S: ${SYNC_INTERVAL_S:-30}
+  PUBLIC_GEOM_MODE: gmina
+  REGISTRATION_MODE: closed
+  AUTO_VERIFY_TRUSTED: "false"
+  POTRZEBA_TTL_H: ${POTRZEBA_TTL_H:-72}
+  CONFIRM_INTERVAL_DAYS: ${CONFIRM_INTERVAL_DAYS:-14}
+  TLS_MODE: off
+  TLS_CERT_FILE: ""
+  TLS_KEY_FILE: ""
+  PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:-admin@node.local}
+  PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:-change-me}
+  SYNC_SUPERUSER_EMAIL: ${SYNC_SUPERUSER_EMAIL:-sync@node.local}
+  SYNC_SUPERUSER_PASSWORD: ${SYNC_SUPERUSER_PASSWORD:-change-me-too}
+  APP_VERSION: ${APP_VERSION:-0.1.0}
+  AED_IMPORT: "off"
+  AED_BBOX: ""
+  AED_BUNDLE_PATH: /app/data/openaedmap-pl.geojson.gz
+  TILES_DIR: /tiles
+  TILES_BBOX: ${TILES_BBOX:-18.82,50.30,18.98,50.42}
+  TILES_MAXZOOM: ${TILES_MAXZOOM:-14}
+  PMTILES_SOURCE: ${PMTILES_SOURCE:-auto}
+  TILES_AGENT_SOCK: ${TILES_AGENT_SOCK:-/tiles/agent.sock}
+
+services:
+  pocketbase:
+    build:
+      context: .
+      dockerfile: pocketbase/Dockerfile
+    environment:
+      <<: *node-env
+    volumes:
+      - pb_data:/pb/pb_data
+      - ./pb_hooks:/pb/pb_hooks
+      - ./pb_migrations:/pb/pb_migrations
+      - ./tiles:/pb/pb_public/tiles:ro
+    expose:
+      - "8090"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 25s
+
+  tiles-agent:
+    build:
+      context: .
+      dockerfile: sync/Dockerfile
+      args:
+        BUILD_TIME_MS: "1700000000000"
+    network_mode: host
+    environment:
+      PMTILES_SOURCE: ${PMTILES_SOURCE:-auto}
+      TILES_AGENT_SOCK: ${TILES_AGENT_SOCK:-/tiles/agent.sock}
+    volumes:
+      - ./tiles:/tiles
+    command: ["node", "/app/sync/tiles_agent.mjs"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('fs').accessSync(process.env.TILES_AGENT_SOCK||'/tiles/agent.sock')"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 4s
+
+  sync-worker:
+    build:
+      context: .
+      dockerfile: sync/Dockerfile
+      args:
+        BUILD_TIME_MS: "1700000000000"
+    environment:
+      <<: *node-env
+      PB_URL: http://pocketbase:8090
+      KEYS_DIR: /keys
+      SYNC_PORT: "8091"
+    volumes:
+      - node_keys:/keys
+      - ./shared:/app/shared:ro
+      - ./data:/app/data:ro
+      - ./tiles:/tiles
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+      tiles-agent:
+        condition: service_healthy
+    expose:
+      - "8091"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8091/sync/v1/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    volumes:
+      - web_static:/out
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /out/index.html"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 5s
+
+  caddy:
+    build: ./caddy
+    depends_on:
+      web:
+        condition: service_healthy
+      pocketbase:
+        condition: service_healthy
+      sync-worker:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      default:
+        aliases:
+          - caddy
+    environment:
+      TLS_MODE: ${TLS_MODE:-off}
+      TLS_CERT_FILE: ${TLS_CERT_FILE:-}
+      TLS_KEY_FILE: ${TLS_KEY_FILE:-}
+      PB_UPSTREAM: pocketbase:8090
+      SYNC_UPSTREAM: sync-worker:8091
+    volumes:
+      - ./caddy:/tpl:ro
+      - ./caddy/entrypoint.sh:/entrypoint.sh:ro
+      - web_static:/srv:ro
+      - caddy_data:/data
+      - ./certs:/certs:ro
+    entrypoint: ["sh", "/entrypoint.sh"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  vite:
+    profiles: ["dev"]
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    volumes:
+      - ./web:/app
+    ports:
+      - "5173:5173"
+    environment:
+      <<: *node-env
+
+  central-pocketbase:
+    profiles: ["central"]
+    build:
+      context: .
+      dockerfile: pocketbase/Dockerfile
+    environment:
+      <<: *central-env
+    volumes:
+      - pb_data_central:/pb/pb_data
+      - ./pb_hooks:/pb/pb_hooks
+      - ./pb_migrations:/pb/pb_migrations
+      - ./tiles:/pb/pb_public/tiles:ro
+    expose:
+      - "8090"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 25s
+
+  central-sync:
+    profiles: ["central"]
+    build:
+      context: .
+      dockerfile: sync/Dockerfile
+      args:
+        BUILD_TIME_MS: "1700000000000"
+    environment:
+      <<: *central-env
+      PB_URL: http://central-pocketbase:8090
+      KEYS_DIR: /keys
+      SYNC_PORT: "8091"
+    volumes:
+      - node_keys_central:/keys
+      - ./shared:/app/shared:ro
+      - ./data:/app/data:ro
+      - ./tiles:/tiles
+    depends_on:
+      central-pocketbase:
+        condition: service_healthy
+    expose:
+      - "8091"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8091/sync/v1/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  central-caddy:
+    profiles: ["central"]
+    build: ./caddy
+    depends_on:
+      central-pocketbase:
+        condition: service_healthy
+      central-sync:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    ports:
+      - "8092:80"
+    networks:
+      default:
+        aliases:
+          - central-caddy
+    environment:
+      TLS_MODE: off
+      PB_UPSTREAM: central-pocketbase:8090
+      SYNC_UPSTREAM: central-sync:8091
+    volumes:
+      - ./caddy:/tpl:ro
+      - ./caddy/entrypoint.sh:/entrypoint.sh:ro
+      - web_static:/srv:ro
+      - caddy_data_central:/data
+    entrypoint: ["sh", "/entrypoint.sh"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+volumes:
+  pb_data:
+  pb_data_central:
+  node_keys:
+  node_keys_central:
+  web_static:
+  caddy_data:
+  caddy_data_central:

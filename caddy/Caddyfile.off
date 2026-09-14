@@ -1,0 +1,32 @@
+{
+  admin off
+  auto_https off
+}
+
+:80 {
+  @notTiles not path /tiles/*
+  encode @notTiles gzip
+
+  handle /api/* {
+    reverse_proxy {$PB_UPSTREAM}
+  }
+
+  handle /_/* {
+    reverse_proxy {$PB_UPSTREAM}
+  }
+
+  handle /sync/v1/* {
+    reverse_proxy {$SYNC_UPSTREAM}
+  }
+
+  handle /tiles/* {
+    reverse_proxy {$PB_UPSTREAM}
+  }
+
+  handle {
+    root * /srv
+    try_files {path} /index.html
+    file_server
+    header /assets/* Cache-Control "public, max-age=31536000, immutable"
+  }
+}

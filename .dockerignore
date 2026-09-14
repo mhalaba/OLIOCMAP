@@ -1,0 +1,9 @@
+node_modules
+.git
+pb_data
+pb_data_central
+node_keys
+backups
+*.pmtiles
+web/dist
+tests/node_modules

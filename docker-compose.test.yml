@@ -1,0 +1,50 @@
+# Użycie: docker compose --profile central -f docker-compose.yml -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
+
+services:
+  pocketbase:
+    environment:
+      POTRZEBA_TTL_H: "0.01"
+      SYNC_INTERVAL_S: "5"
+      CENTRAL_URL: http://central-caddy
+      CONFIRM_INTERVAL_DAYS: "14"
+
+  sync-worker:
+    environment:
+      POTRZEBA_TTL_H: "0.01"
+      SYNC_INTERVAL_S: "5"
+      CENTRAL_URL: http://central-caddy
+      AED_IMPORT: "off"
+
+  central-pocketbase:
+    environment:
+      POTRZEBA_TTL_H: "0.01"
+  central-sync:
+    environment:
+      POTRZEBA_TTL_H: "0.01"
+      SYNC_INTERVAL_S: "5"
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    network_mode: service:caddy
+    depends_on:
+      caddy:
+        condition: service_healthy
+      pocketbase:
+        condition: service_healthy
+      sync-worker:
+        condition: service_healthy
+      central-pocketbase:
+        condition: service_healthy
+      central-caddy:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://127.0.0.1
+      CENTRAL_URL: http://central-caddy
+      PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:-admin@node.local}
+      PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:-change-me}
+      NODE_ID: ${NODE_ID:-bytom-01}
+      COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-workspace}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
