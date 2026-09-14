@@ -6,6 +6,7 @@ import { MapView } from "../components/MapView";
 import { CatIcon } from "../components/CategoryBadge";
 import { t } from "../i18n";
 import { currentUser, isOperator, pb, asArray } from "../lib/pb";
+import { findTilesFile } from "../lib/tiles";
 import { DEFAULT_CATEGORY_ON, PUBLIC_CATEGORIES, type Category, type Point, type Service } from "../types";
 
 function pointCoords(p: Point): { lat: number; lon: number } | null {
@@ -61,6 +62,7 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
   const [services, setServices] = useState<Service[]>([]);
   const [tileWarn, setTileWarn] = useState("");
   const [tilesKey, setTilesKey] = useState(0);
+  const [coverageWarn, setCoverageWarn] = useState("");
   const [hits, setHits] = useState<Point[]>([]);
   const [focusPoint, setFocusPoint] = useState<Point | null>(null);
   const [focusSeq, setFocusSeq] = useState(0);
@@ -121,16 +123,9 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
     if (!tileWarn) return;
     let stop = false;
     const tick = async () => {
-      try {
-        const idx = await fetch("/tiles/index.json").then((r) => (r.ok ? r.json() : null));
-        const files: string[] = idx?.files || [];
-        const head = await fetch("/tiles/poland.pmtiles", { method: "HEAD" });
-        if (!stop && (files.some((f) => f.endsWith(".pmtiles")) || head.ok)) {
-          setTileWarn("");
-          setTilesKey((k) => k + 1);
-        }
-      } catch {
-        /* jeszcze nie ma */
+      if (!stop && (await findTilesFile())) {
+        setTileWarn("");
+        setTilesKey((k) => k + 1);
       }
     };
     tick();
@@ -189,6 +184,7 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
           else if (missing) setTileWarn(t("map.brakKafelkowKrotko"));
           else setTileWarn("");
         }}
+        onCoverage={(outside, name) => setCoverageWarn(outside ? t("map.pozaZasiegiem", { name }) : "")}
       />
       <div className="top-controls">
         <div className="search-box">
@@ -234,6 +230,11 @@ export function MapPage({ intervalDays }: { intervalDays: number }) {
         <Legend />
         {pendingMine ? <p className="map-hint">{t("map.oczekujeHint")}</p> : null}
       </div>
+      {!tileWarn && coverageWarn ? (
+        <div className="warn-offline soft" role="status">
+          {coverageWarn}
+        </div>
+      ) : null}
       {tileWarn ? (
         <div className="warn-offline">
           {tileWarn}

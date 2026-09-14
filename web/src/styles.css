@@ -721,3 +721,43 @@ a { color: var(--navy); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Skala: metry + czas pieszo (~5 km/h). Prawy dolny róg, nad przyciskiem Zgłoś. */
+.maplibregl-ctrl-bottom-right {
+  bottom: calc(var(--nav-h) + 84px) !important;
+  right: max(10px, env(safe-area-inset-right)) !important;
+}
+.map-wrap.pick .maplibregl-ctrl-bottom-right { bottom: 12px !important; }
+.oc-scale {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(244, 247, 250, 0.9);
+  color: var(--navy-ink);
+  font: 700 12px/1.2 var(--font);
+  pointer-events: none;
+}
+.oc-scale-bar {
+  box-sizing: content-box;
+  height: 8px;
+  border: 2px solid var(--navy-ink);
+  border-top: 0;
+  padding: 0 0 2px;
+  text-align: center;
+  white-space: nowrap;
+}
+.oc-scale-dist { display: block; margin-top: -14px; }
+.oc-scale-walk { font-weight: 600; color: var(--muted); white-space: nowrap; }
+
+/* Widok poza bbox pliku PMTiles — informacja, nie alarm. */
+.warn-offline.soft {
+  left: 52px;
+  background: var(--paper);
+  color: var(--navy-ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  font-weight: 600;
+}

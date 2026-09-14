@@ -66,6 +66,16 @@ scripts/make-tiles.sh
 
 Cała Polska przy z14 to kilka GB; powiat przy z14 — dziesiątki MB (zalecane dla OSP). Atrybucja: © OpenStreetMap, Protomaps. Bez pliku mapa pokaże ostrzeżenie i — tylko gdy jest internet — raster OSM.
 
+Nazwa pliku jest dowolna (na Sietchu leży np. `slask-z13.pmtiles`). Aplikacja czyta `/tiles/index.json`, a gdy go nie ma — próbuje znanych nazw; `pmtiles:///tiles/poland.pmtiles` w `style.json` to tylko placeholder, zawsze nadpisywany. Zasięg i maxzoom bierze z nagłówka PMTiles: powyżej maxzoom działa overzoom (ulice zostają), a po wyjechaniu poza bbox pliku mapa pokazuje komunikat „Poza zasięgiem mapy offline (Śląsk)” zamiast pustki bez wyjaśnienia.
+
+Trzy pułapki, które już raz położyły mapę:
+
+- **Glify.** W `/glyphs` jest wyłącznie `Noto Sans Regular`. Inna czcionka w stylu → Caddy oddaje `index.html` (fallback SPA) → MapLibre sypie `Unimplemented type: 4`. `MapView` przed załadowaniem stylu wymusza Regular na każdej warstwie `symbol`.
+- **Service Worker.** `/tiles/*` musi być `NetworkOnly` i nie może trafiać do precache — `CacheFirst` psuje żądania Range i ulice znikają. `tiles/index.json` też nie idzie do precache (byłby wiecznie pusty).
+- **`background-color` na warstwie `fill`** (np. `earth`) unieważnia cały styl — MapLibre nie rysuje wtedy nic.
+
+Do sprawdzenia stylu bez węzła: `npm run dev` i `/?demo=1&tiles=https://…/plik.pmtiles` (tylko w trybie dev; zdalny plik musi mieć CORS i Range).
+
 ## AED z OpenAEDMap
 
 Przy starcie węzeł wgrywa defibrylatory z paczki `data/openaedmap-pl.geojson.gz` (eksport [OpenAEDMap](https://openaedmap.org/api/v1/countries/PL.geojson), dane OSM). To nie jest skrapanie. Rekordy mają `external_ref=osm:…`, status zweryfikowany, interwał potwierdzenia 365 dni — **potwierdź w terenie**.

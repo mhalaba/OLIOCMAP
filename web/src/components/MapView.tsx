@@ -23,13 +23,16 @@ import {
   POLAND_MIN_ZOOM,
   POLAND_SOURCE_BOUNDS,
 } from "../lib/poland";
+import { coverageName, insideCoverage, resolveTiles, type TileCoverage } from "../lib/tiles";
+import { WalkScaleControl } from "../lib/walkScale";
+import { GLYPH_FONT, GLYPH_URL, normalizeStyleFonts, registerGlyphProtocol } from "../lib/glyphs";
 import { CATEGORY_COLORS, type Category, type Point, type Service } from "../types";
 import { activationText, freshnessLabel, isPresentDate } from "../lib/format";
 import { asArray } from "../lib/pb";
 
 const OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const BYTOM: [number, number] = [18.923, 50.348];
-const GLYPHS = "/glyphs/{fontstack}/{range}.pbf";
+const GLYPHS = GLYPH_URL;
 const OC_BG = "#e8eef4";
 const OC_NAVY = "#1e3a5f";
 
@@ -40,6 +43,8 @@ type Props = {
   pickMode?: boolean;
   onPick?: (lat: number, lon: number) => void;
   onTilesMissing?: (missing: boolean, onlineFallback: boolean) => void;
+  /** Widok wyjechał poza bbox pliku PMTiles (np. poza Śląsk) — UI ma to pokazać, nie paść. */
+  onCoverage?: (outside: boolean, name: string) => void;
   intervalDays?: number;
   focusPoint?: Point | null;
   focusSeq?: number;
@@ -209,7 +214,7 @@ const FALLBACK_LAYERS: maplibregl.LayerSpecification[] = [
     minzoom: 7,
     layout: {
       "text-field": ["coalesce", ["get", "name:pl"], ["get", "name"], ["get", "name:en"]],
-      "text-font": ["Noto Sans Medium"],
+      "text-font": [GLYPH_FONT],
       "text-size": ["interpolate", ["linear"], ["zoom"], 8, 12, 14, 16],
     },
     paint: { "text-color": "#0f2744", "text-halo-color": OC_BG, "text-halo-width": 1.8 },
@@ -244,7 +249,7 @@ function addPointLayers(map: Map, iconsOk: boolean) {
     filter: ["has", "point_count"],
     layout: {
       "text-field": ["get", "point_count_abbreviated"],
-      "text-font": ["Noto Sans Medium"],
+      "text-font": [GLYPH_FONT],
       "text-size": 12,
       "text-allow-overlap": true,
     },
@@ -382,6 +387,7 @@ export function MapView({
   pickMode,
   onPick,
   onTilesMissing,
+  onCoverage,
   intervalDays = 14,
   focusPoint = null,
   focusSeq = 0,
@@ -523,6 +529,7 @@ export function MapView({
         /* pierwszy raz */
       }
       maplibregl.addProtocol("pmtiles", protocol.tile);
+      registerGlyphProtocol();
       let style: maplibregl.StyleSpecification = {
         version: 8,
         glyphs: GLYPHS,
@@ -531,30 +538,33 @@ export function MapView({
       };
       let missing = true;
       let onlineFallback = false;
+      let coverage: TileCoverage | null = null;
+      let coverageLabel = "";
       try {
-        const idx = await fetch("/tiles/index.json").then((r) => (r.ok ? r.json() : { files: [] }));
-        const files: string[] = idx.files || [];
-        const file =
-          files.find((f: string) => f.endsWith(".pmtiles")) ||
-          (await fetch("/tiles/poland.pmtiles", { method: "HEAD" }).then((r) => (r.ok ? "poland.pmtiles" : "")));
-        if (file) {
+        const tiles = await resolveTiles(protocol);
+        if (tiles) {
           missing = false;
-          const origin = window.location.origin;
-          const pmtilesUrl = `pmtiles://${origin}/tiles/${file}`;
-          const local = await fetch("/style.json").then((r) => (r.ok ? r.json() : null));
+          coverage = tiles.coverage;
+          coverageLabel = coverageName(tiles.file);
+          const pmtilesUrl = `pmtiles://${tiles.url}`;
+          const local = await fetch("/style.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
           style = local || {
             version: 8,
             glyphs: GLYPHS,
             sources: { basemap: { type: "vector", url: pmtilesUrl } },
             layers: FALLBACK_LAYERS,
           };
-          if (!style.glyphs) style.glyphs = GLYPHS;
           if (!style.sources) style.sources = {};
-          style.sources.basemap = { type: "vector", url: pmtilesUrl, bounds: POLAND_SOURCE_BOUNDS };
+          // style.json ma placeholder poland.pmtiles — zawsze nadpisujemy tym, co realnie leży w /tiles.
+          // Bez własnych `bounds`: bbox i maxzoom bierzemy z nagłówka PMTiles (poza nim MapLibre nie prosi o kafelki,
+          // powyżej maxzoom robi overzoom — ulice zostają).
+          style.sources.basemap = { type: "vector", url: pmtilesUrl };
         }
       } catch {
         missing = true;
       }
+      // W /glyphs jest tylko Noto Sans Regular; inny krój w stylu z dysku → HTML zamiast PBF.
+      normalizeStyleFonts(style);
       if (missing && navigator.onLine) {
         onlineFallback = true;
         style.glyphs = GLYPHS;
@@ -594,6 +604,20 @@ export function MapView({
         return;
       }
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
+      map.addControl(new WalkScaleControl(), "bottom-right");
+      if (coverage && onCoverage) {
+        let lastOutside: boolean | null = null;
+        const checkCoverage = () => {
+          const c = map.getCenter();
+          const outside = !insideCoverage(coverage, c.lng, c.lat);
+          if (outside !== lastOutside) {
+            lastOutside = outside;
+            onCoverage(outside, coverageLabel);
+          }
+        };
+        map.on("moveend", checkCoverage);
+        checkCoverage();
+      }
       const openPopup = (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f || pickMode) return;

@@ -40,6 +40,8 @@
     "geoPozaPolska": "Pozycja jest poza mapą Polski — zostawiam widok w kraju.",
     "brakKafelkow": "Brak kafelków offline — pobierz mapę na stronie Węzeł albo wgraj plik PMTiles.",
     "brakKafelkowKrotko": "Brak kafelków offline",
+    "pozaZasiegiem": "Poza zasięgiem mapy offline ({name}) — tu nie ma ulic. Wróć w obszar pobranych kafelków.",
+    "skalaPieszo": "pieszo",
     "pobierzKafelki": "Pobierz mapę offline",
     "nawiguj": "Nawiguj",
     "zglosBlad": "Zgłoś błąd",

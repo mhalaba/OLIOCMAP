@@ -26,7 +26,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,json,ico,woff2,pbf}"],
+        // tiles/index.json jest generowany na węźle — precache dawałby wieczne { files: [] }.
+        globIgnores: ["**/tiles/**", "**/node_modules/**"],
         navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api\//, /^\/_\//, /^\/sync\//, /^\/tiles\//, /^\/glyphs\//],
         runtimeCaching: [
           {
             urlPattern: /\/api\/feed\.geojson/,
